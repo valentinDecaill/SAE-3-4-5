@@ -1,12 +1,12 @@
-INSERT INTO utilisateur (id_utilisateur, login, email, password, role, nom) VALUES
-(1, 'admin', 'admin@admin.fr',
-    'pbkdf2:sha256:600000$DkUBX5uS1445k98Z$81315582236a282914102927806f3661271f653a99285094206c97a7a13d0382',
+INSERT INTO utilisateur (login, email, password, role, nom) VALUES
+('admin', 'admin@admin.fr',
+    'scrypt:32768:8:1$Z7LLPKP7hQDGO5Q7$639cec02ccb15e8b4c0f60ab5c8929b76bdeba9921b9ac0c2b70b119f5c5a671dd018e0a6a5b4054520640f53649e81457777e463f0ef9a640c521794ce01686',
     'ROLE_admin', 'admin'),
-(2, 'client1', 'client@client.fr',
-    'pbkdf2:sha256:600000$M7j0v9yr4415z73A$152865766324a29165213645814f3665241c653b99245195206d96a7a13e0491',
+('client1', 'client@client.fr',
+    'scrypt:32768:8:1$EWc6JbJYAydwSivu$3fff0e7cb9f58651a8071ce29503d02f9e5f19b93253783d222ac785a25d016dfc0208884f9d2bb564600907c6474c54ee783cdcaef3bc0b96ab77d1734454ff',
     'ROLE_client', 'client1'),
-(3, 'client2', 'client2@client2.fr',
-    'pbkdf2:sha256:600000$T4k9x2zp7782q15B$263976877435b30276324756925g4776352d764c00356206317e07b8b24f1502',
+( 'client2', 'client2@client2.fr',
+    'scrypt:32768:8:1$CXrCpwAYwqjIBSJx$f03f4f3e0517fcd4fc4b47a885f3716973b5ad11fb55b37082ae4ae9b023d4bc5b4865eb26f33f5fceb1655e4023cd0eae6778e42a2e47885657a2a36d6b7d6a',
     'ROLE_client', 'client2');
 
 
