@@ -67,7 +67,7 @@ CREATE TABLE commande(
 CREATE TABLE ligne_commande(
    jean_id INT,
    commande_id INT,
-   quantite INT,
+   quantite_commande INT,
    prix INT,
    PRIMARY KEY(jean_id, commande_id),
    FOREIGN KEY(jean_id) REFERENCES jean(id_jean),
@@ -77,7 +77,7 @@ CREATE TABLE ligne_commande(
 CREATE TABLE ligne_panier(
    jean_id INT,
    utilisateur_id INT,
-   quantite INT,
+   quantite_panier INT,
    date_ajout DATE,
    PRIMARY KEY(jean_id, utilisateur_id),
    FOREIGN KEY(jean_id) REFERENCES jean(id_jean),
@@ -93,6 +93,6 @@ CREATE TABLE ligne_panier(
 -- etat = (id_etat INT, libelle VARCHAR(255));
 -- jean = (id_jean INT, nom_jean VARCHAR(255), matiere VARCHAR(255), couleur VARCHAR(255), description VARCHAR(255), marque VARCHAR(255), photo VARCHAR(255), stock_ INT, fournisseur VARCHAR(255), prix_jean DECIMAL(15,2), #coupe_jean_id, #taille_id);
 -- commande_ = (id_commande INT, date_achat DATE, #utilisateur_id, #etat_id);
--- ligne_commande = (#jean_id, #commande_id, quantite INT, prix INT);
--- ligne_panier = (#jean_id, #utilisateur_id, quantite INT, date_ajout DATE);
+-- ligne_commande = (#jean_id, #commande_id, quantite_commande INT, prix INT);
+-- ligne_panier = (#jean_id, #utilisateur_id, quantite_panier INT, date_ajout DATE);
 
