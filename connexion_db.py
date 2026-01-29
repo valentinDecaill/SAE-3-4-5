@@ -11,7 +11,7 @@ def get_db():
             # host="serveurmysql",
             user="valou",
             password="1301",
-            database="teste",
+            database="test",
             charset='utf8mb4',
             port=3307 ,
             cursorclass=pymysql.cursors.DictCursor
