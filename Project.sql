@@ -9,35 +9,35 @@ DROP TABLE IF EXISTS coupe_jean;
 DROP TABLE IF EXISTS taille;
 
 CREATE TABLE taille(
-   taille_id INT,
+   id_taille INT,
    nom_taille VARCHAR(255) NOT NULL,
-   PRIMARY KEY(taille_id)
+   PRIMARY KEY(id_taille)
 );
 
 CREATE TABLE coupe_jean(
-   coupe_jean_id INT,
+   id_coupe_jean INT,
    nom_coupe VARCHAR(255) NOT NULL,
-   PRIMARY KEY(coupe_jean_id)
+   PRIMARY KEY(id_coupe_jean)
 );
 
 CREATE TABLE utilisateur(
-   utilisateur_id INT,
+   id_utilisateur INT,
    login VARCHAR(255),
    email VARCHAR(255),
    nom VARCHAR(255),
    password VARCHAR(255),
    role VARCHAR(255),
-   PRIMARY KEY(utilisateur_id)
+   PRIMARY KEY(id_utilisateur)
 );
 
 CREATE TABLE etat(
-   etat_id INT,
+   id_etat INT,
    libelle VARCHAR(255),
-   PRIMARY KEY(etat_id)
+   PRIMARY KEY(id_etat)
 );
 
 CREATE TABLE jean(
-   jean_id INT,
+   id_jean INT,
    nom_jean VARCHAR(255) NOT NULL,
    matiere VARCHAR(255),
    couleur VARCHAR(255),
@@ -49,19 +49,19 @@ CREATE TABLE jean(
    prix_jean DECIMAL(15,2) NOT NULL,
    coupe_jean_id INT NOT NULL,
    taille_id INT NOT NULL,
-   PRIMARY KEY(jean_id),
-   FOREIGN KEY(coupe_jean_id) REFERENCES coupe_jean(coupe_jean_id),
-   FOREIGN KEY(taille_id) REFERENCES taille(taille_id)
+   PRIMARY KEY(id_jean),
+   FOREIGN KEY(coupe_jean_id) REFERENCES coupe_jean(id_coupe_jean),
+   FOREIGN KEY(taille_id) REFERENCES taille(id_taille)
 );
 
-CREATE TABLE commande_(
-   commande_id INT,
+CREATE TABLE commande(
+   id_commande INT,
    date_achat DATE,
    utilisateur_id INT NOT NULL,
    etat_id INT NOT NULL,
-   PRIMARY KEY(commande_id),
-   FOREIGN KEY(utilisateur_id) REFERENCES utilisateur(utilisateur_id),
-   FOREIGN KEY(etat_id) REFERENCES etat(etat_id)
+   PRIMARY KEY(id_commande),
+   FOREIGN KEY(utilisateur_id) REFERENCES utilisateur(id_utilisateur),
+   FOREIGN KEY(etat_id) REFERENCES etat(id_etat)
 );
 
 CREATE TABLE ligne_commande(
@@ -70,8 +70,8 @@ CREATE TABLE ligne_commande(
    quantite INT,
    prix INT,
    PRIMARY KEY(jean_id, commande_id),
-   FOREIGN KEY(jean_id) REFERENCES jean(jean_id),
-   FOREIGN KEY(commande_id) REFERENCES commande_(commande_id)
+   FOREIGN KEY(jean_id) REFERENCES jean(id_jean),
+   FOREIGN KEY(commande_id) REFERENCES commande(id_commande)
 );
 
 CREATE TABLE ligne_panier(
@@ -80,19 +80,19 @@ CREATE TABLE ligne_panier(
    quantite INT,
    date_ajout DATE,
    PRIMARY KEY(jean_id, utilisateur_id),
-   FOREIGN KEY(jean_id) REFERENCES jean(jean_id),
-   FOREIGN KEY(utilisateur_id) REFERENCES utilisateur(utilisateur_id)
+   FOREIGN KEY(jean_id) REFERENCES jean(id_jean),
+   FOREIGN KEY(utilisateur_id) REFERENCES utilisateur(id_utilisateur)
 );
 
 
 
 -- MLD
--- taille = (taille_id INT, nom_taille VARCHAR(255));
--- coupe_jean = (coupe_jean_id INT, nom_coupe VARCHAR(255));
--- utilisateur = (utilisateur_id INT, login VARCHAR(255), email VARCHAR(255), nom VARCHAR(255), password VARCHAR(255), role VARCHAR(255));
--- etat = (etat_id INT, libelle VARCHAR(255));
--- jean = (jean_id INT, nom_jean VARCHAR(255), matiere VARCHAR(255), couleur VARCHAR(255), description VARCHAR(255), marque VARCHAR(255), photo VARCHAR(255), stock_ INT, fournisseur VARCHAR(255), prix_jean DECIMAL(15,2), #coupe_jean_id, #taille_id);
--- commande_ = (commande_id INT, date_achat DATE, #utilisateur_id, #etat_id);
+-- taille = (id_taille INT, nom_taille VARCHAR(255));
+-- coupe_jean = (id_coupe_jean INT, nom_coupe VARCHAR(255));
+-- utilisateur = (id_utilisateur INT, login VARCHAR(255), email VARCHAR(255), nom VARCHAR(255), password VARCHAR(255), role VARCHAR(255));
+-- etat = (id_etat INT, libelle VARCHAR(255));
+-- jean = (id_jean INT, nom_jean VARCHAR(255), matiere VARCHAR(255), couleur VARCHAR(255), description VARCHAR(255), marque VARCHAR(255), photo VARCHAR(255), stock_ INT, fournisseur VARCHAR(255), prix_jean DECIMAL(15,2), #coupe_jean_id, #taille_id);
+-- commande_ = (id_commande INT, date_achat DATE, #utilisateur_id, #etat_id);
 -- ligne_commande = (#jean_id, #commande_id, quantite INT, prix INT);
 -- ligne_panier = (#jean_id, #utilisateur_id, quantite INT, date_ajout DATE);
 
