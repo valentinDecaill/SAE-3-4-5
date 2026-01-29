@@ -9,19 +9,19 @@ DROP TABLE IF EXISTS coupe_jean;
 DROP TABLE IF EXISTS taille;
 
 CREATE TABLE taille(
-   id_taille INT,
+   id_taille INT AUTO_INCREMENT,
    nom_taille VARCHAR(255) NOT NULL,
    PRIMARY KEY(id_taille)
 );
 
 CREATE TABLE coupe_jean(
-   id_coupe_jean INT,
+   id_coupe_jean INT AUTO_INCREMENT,
    nom_coupe VARCHAR(255) NOT NULL,
    PRIMARY KEY(id_coupe_jean)
 );
 
 CREATE TABLE utilisateur(
-   id_utilisateur INT,
+   id_utilisateur INT AUTO_INCREMENT,
    login VARCHAR(255),
    email VARCHAR(255),
    nom VARCHAR(255),
@@ -31,13 +31,13 @@ CREATE TABLE utilisateur(
 );
 
 CREATE TABLE etat(
-   id_etat INT,
+   id_etat INT AUTO_INCREMENT,
    libelle VARCHAR(255),
    PRIMARY KEY(id_etat)
 );
 
 CREATE TABLE jean(
-   id_jean INT,
+   id_jean INT AUTO_INCREMENT,
    nom_jean VARCHAR(255) NOT NULL,
    matiere VARCHAR(255),
    couleur VARCHAR(255),
@@ -55,7 +55,7 @@ CREATE TABLE jean(
 );
 
 CREATE TABLE commande(
-   id_commande INT,
+   id_commande INT AUTO_INCREMENT,
    date_achat DATE,
    utilisateur_id INT NOT NULL,
    etat_id INT NOT NULL,
@@ -65,7 +65,7 @@ CREATE TABLE commande(
 );
 
 CREATE TABLE ligne_commande(
-   jean_id INT,
+   jean_id INT AUTO_INCREMENT,
    commande_id INT,
    quantite_commande INT,
    prix INT,
@@ -75,7 +75,7 @@ CREATE TABLE ligne_commande(
 );
 
 CREATE TABLE ligne_panier(
-   jean_id INT,
+   jean_id INT AUTO_INCREMENT,
    utilisateur_id INT,
    quantite_panier INT,
    date_ajout DATE,
