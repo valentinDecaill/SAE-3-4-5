@@ -16,10 +16,16 @@ def client_article_show():
     id_client = session['id_user']
 
     sql = '''
-          SELECT id_jean, nom_jean, prix_jean, stock_, photo, nom_coupe, nom_taille
-          FROM jean
-                   INNER JOIN coupe_jean ON jean.coupe_jean_id = coupe_jean.id_coupe_jean
-                   INNER JOIN taille ON jean.taille_id = taille.id_taille 
+            SELECT id_jean AS id_article, 
+             nom_jean AS nom, 
+             prix_jean AS prix, 
+             stock_ AS stock, 
+             photo AS image, 
+             nom_coupe, 
+             nom_taille
+      FROM jean
+               INNER JOIN coupe_jean ON jean.coupe_jean_id = coupe_jean.id_coupe_jean
+               INNER JOIN taille ON jean.taille_id = taille.id_taille
           '''
     mycursor.execute(sql)
     articles = mycursor.fetchall()
