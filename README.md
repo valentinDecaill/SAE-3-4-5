@@ -24,16 +24,16 @@ git clone [https://github.com/valentinDecaill/SAE-3-4-5.git](https://github.com/
 
 ### 2. Créer l'environnement virtuel
 Créez un environnement virtuel pour isoler les dépendances du projet :
- $ python3 -m venv .venv
- $ source .venv/bin/activate
+* $ python3 -m venv .venv
+* $ source .venv/bin/activate
 
 ### 3. Installer les dépendances
 Installez toutes les bibliothèques nécessaires:
-  $ pip install -r requirements.txt
+*  $ pip install -r requirements.txt
   
 ### 4. Configuration de la Base de Données
-tables et insert dans **"sae_sql.sql"**
-faite un fichier **connexion_db.py*** en utilisant le modèle fournit : **connexion_db_sample.py**
+* tables et insert dans **"sae_sql.sql"**
+* faite un fichier **connexion_db.py*** en utilisant le modèle fournit : **connexion_db_sample.py**
 
 ### 5. Lancement de l'application
-  $ python app.py
+*  $ python app.py
