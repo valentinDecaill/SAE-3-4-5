@@ -56,12 +56,16 @@ def client_panier_delete():
     article_panier=[]
 
     if not(article_panier is None) and article_panier['quantite'] > 1:
-        sql = ''' mise à jour de la quantité dans le panier => -1 article '''
+        sql = '''UPDATE ligne_panier SET quantite = quantite-%s  WHERE utilisateur_id = %s AND stylo_id=%s'''
+        mycursor.execute(sql, (quantite, id_client, id_article))
+
     else:
-        sql = ''' suppression de la ligne de panier'''
+        sql = '''DELETE FROM ligne_panier WHERE utilisateur_id = %s AND stylo_id=%s'''
+        mycursor.execute(sql, (id_client, id_article))
 
     # mise à jour du stock de l'article disponible
     get_db().commit()
+    mycursor.execute("UPDATE ***** SET stock = stock + %s WHERE id=%s", (quantite, id_article))
     return redirect('/client/article/show')
 
 
