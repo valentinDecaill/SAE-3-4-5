@@ -26,9 +26,33 @@ def client_article_show():
             FROM jean
             INNER JOIN coupe_jean ON jean.coupe_jean_id = coupe_jean.id_coupe_jean
             INNER JOIN taille ON jean.taille_id = taille.id_taille
-            ORDER BY nom_jean;
+            WHERE 1=1
           '''
     mycursor.execute(sql)
+    articles = mycursor.fetchall()
+    list_param = []
+    condition_and = ""
+
+    if session.get('filter_word'):
+        condition_and += " AND nom_jean LIKE %s "
+        list_param.append(f"%{session['filter_word']}%")
+
+    if session.get('filter_prix_min'):
+        condition_and += " AND prix_jean >= %s "
+        list_param.append(session['filter_prix_min'])
+
+    if session.get('filter_prix_max'):
+        condition_and += " AND prix_jean <= %s "
+        list_param.append(session['filter_prix_max'])
+
+    if session.get('filter_types') and session.get('filter_types') != []:
+        placeholders = ', '.join(['%s'] * len(session['filter_types']))
+        condition_and += f" AND coupe_jean_id IN ({placeholders}) "
+        list_param.extend(session['filter_types'])
+
+    sql += condition_and + " ORDER BY nom_jean;"
+
+    mycursor.execute(sql, tuple(list_param))
     articles = mycursor.fetchall()
 
     sql = '''SELECT id_coupe_jean AS id_type_article, nom_coupe AS libelle FROM coupe_jean ORDER BY nom_coupe'''
@@ -66,6 +90,8 @@ def client_article_show():
             mycursor.execute(sql, (quantite, id_article))
 
             get_db().commit()
+
+            return redirect('/client/article/show')
 
     sql = '''
         SELECT ligne_panier.jean_id AS id_article, 
@@ -134,4 +160,29 @@ def client_panier_vider():
     mycursor.execute(sql_delete, (id_client,))
 
     get_db().commit()
+    return redirect('/client/article/show')
+
+
+@client_article.route('/client/panier/filtre', methods=['POST'])
+def client_filtre():
+    filter_word = request.form.get('filter_word', None)
+    filter_prix_min = request.form.get('filter_prix_min', None)
+    filter_prix_max = request.form.get('filter_prix_max', None)
+    filter_types = request.form.getlist('filter_types')
+
+    session['filter_word'] = filter_word
+    session['filter_prix_min'] = filter_prix_min
+    session['filter_prix_max'] = filter_prix_max
+    session['filter_types'] = filter_types
+
+    return redirect('/client/article/show')
+
+
+@client_article.route('/client/panier/filtre/suppr', methods=['POST'])
+def client_filtre_suppr():
+    session.pop('filter_word', None)
+    session.pop('filter_types', None)
+    session.pop('filter_prix_min', None)
+    session.pop('filter_prix_max', None)
+
     return redirect('/client/article/show')
