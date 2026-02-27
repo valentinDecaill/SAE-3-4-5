@@ -17,7 +17,17 @@ admin_article = Blueprint('admin_article', __name__,
 @admin_article.route('/admin/article/show')
 def show_article():
     mycursor = get_db().cursor()
-    sql = '''  requête admin_article_1
+    sql = '''
+    SELECT j.id_jean AS id_article, 
+               j.nom_jean AS nom, 
+               j.prix_jean AS prix, 
+               j.stock_ AS stock, 
+               j.photo AS image, 
+               c.nom_coupe AS libelle,
+               c.id_coupe_jean AS type_article_id
+        FROM jean j
+        LEFT JOIN coupe_jean c ON j.coupe_jean_id = c.id_coupe_jean
+        ORDER BY j.nom_jean;
     '''
     mycursor.execute(sql)
     articles = mycursor.fetchall()
@@ -42,7 +52,7 @@ def valid_add_article():
     nom = request.form.get('nom', '')
     type_article_id = request.form.get('type_article_id', '')
     prix = request.form.get('prix', '')
-    description = request.form.get('description', '')
+    stock = request.form.get('stock', 0)
     image = request.files.get('image', '')
 
     if image:
@@ -52,16 +62,18 @@ def valid_add_article():
         print("erreur")
         filename=None
 
-    sql = '''  requête admin_article_2 '''
+    sql = '''
+     INSERT INTO jean (nom_jean, photo, prix_jean, coupe_jean_id, stock_, image) 
+        VALUES (%s, %s, %s, %s, %s)'''
 
-    tuple_add = (nom, filename, prix, type_article_id, description)
+    tuple_add = (nom, filename, prix, type_article_id, stock)
     print(tuple_add)
     mycursor.execute(sql, tuple_add)
     get_db().commit()
 
     print(u'article ajouté , nom: ', nom, ' - type_article:', type_article_id, ' - prix:', prix,
-          ' - description:', description, ' - image:', image)
-    message = u'article ajouté , nom:' + nom + '- type_article:' + type_article_id + ' - prix:' + prix + ' - description:' + description + ' - image:' + str(
+          ' - description:', stock, ' - image:', image)
+    message = u'article ajouté , nom:' + nom + '- type_article:' + type_article_id + ' - prix:' + prix + ' - stock:' + stock + ' - image:' + str(
         image)
     flash(message, 'alert-success')
     return redirect('/admin/article/show')
@@ -71,20 +83,22 @@ def valid_add_article():
 def delete_article():
     id_article=request.args.get('id_article')
     mycursor = get_db().cursor()
-    sql = ''' requête admin_article_3 '''
+    sql = ''' 
+     SELECT COUNT(*) AS nb_declinaison FROM ligne_commande WHERE jean_id = %s
+     '''
     mycursor.execute(sql, id_article)
     nb_declinaison = mycursor.fetchone()
     if nb_declinaison['nb_declinaison'] > 0:
         message= u'il y a des declinaisons dans cet article : vous ne pouvez pas le supprimer'
         flash(message, 'alert-warning')
     else:
-        sql = ''' requête admin_article_4 '''
+        sql = ''' SELECT photo AS image FROM jean WHERE id_jean = %s '''
         mycursor.execute(sql, id_article)
         article = mycursor.fetchone()
         print(article)
         image = article['image']
 
-        sql = ''' requête admin_article_5  '''
+        sql = ''' DELETE FROM jean WHERE id_jean = %s  '''
         mycursor.execute(sql, id_article)
         get_db().commit()
         if image != None:
@@ -102,13 +116,20 @@ def edit_article():
     id_article=request.args.get('id_article')
     mycursor = get_db().cursor()
     sql = '''
-    requête admin_article_6    
+    SELECT id_jean AS id_article, 
+               nom_jean AS nom, 
+               prix_jean AS prix, 
+               photo AS image, 
+               coupe_jean_id AS type_article_id,
+               stock_ AS stock 
+        FROM jean 
+        WHERE id_jean = %s 
     '''
     mycursor.execute(sql, id_article)
     article = mycursor.fetchone()
     print(article)
     sql = '''
-    requête admin_article_7
+    SELECT id_coupe_jean AS id_type_article, nom_coupe AS libelle FROM coupe_jean ORDER BY nom_coupe
     '''
     mycursor.execute(sql)
     types_article = mycursor.fetchall()
@@ -134,9 +155,9 @@ def valid_edit_article():
     image = request.files.get('image', '')
     type_article_id = request.form.get('type_article_id', '')
     prix = request.form.get('prix', '')
-    description = request.form.get('description')
+    stock = request.form.get('stock')
     sql = '''
-       requête admin_article_8
+       SELECT photo AS image FROM jean WHERE id_jean = %s
        '''
     mycursor.execute(sql, id_article)
     image_nom = mycursor.fetchone()
@@ -151,13 +172,17 @@ def valid_edit_article():
             image.save(os.path.join('static/images/', filename))
             image_nom = filename
 
-    sql = '''  requête admin_article_9 '''
-    mycursor.execute(sql, (nom, image_nom, prix, type_article_id, description, id_article))
+    sql = '''
+     UPDATE jean 
+        SET nom_jean = %s, photo = %s, prix_jean = %s, coupe_jean_id = %s, stock_ = %s 
+        WHERE id_jean = %s
+        '''
+    mycursor.execute(sql, (nom, image_nom, prix, type_article_id, stock, id_article))
 
     get_db().commit()
     if image_nom is None:
         image_nom = ''
-    message = u'article modifié , nom:' + nom + '- type_article :' + type_article_id + ' - prix:' + prix  + ' - image:' + image_nom + ' - description: ' + description
+    message = u'article modifié , nom:' + nom + '- type_article :' + type_article_id + ' - prix:' + prix  + ' - image:' + image_nom + ' - stock: ' + stock
     flash(message, 'alert-success')
     return redirect('/admin/article/show')
 
