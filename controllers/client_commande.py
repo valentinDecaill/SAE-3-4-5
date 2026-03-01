@@ -48,7 +48,7 @@ def client_commande_add():
 
 
     date_commande = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-    tuple_insert = (date_commande, id_client, 1)
+    tuple_insert = (date_commande, id_client, 3)
     sql = "INSERT INTO commande(date_achat, utilisateur_id, etat_id) VALUES (%s, %s, %s)"
     mycursor.execute(sql, tuple_insert)
 

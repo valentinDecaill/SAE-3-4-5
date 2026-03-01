@@ -20,7 +20,7 @@ def client_panier_add():
     id_declinaison_article = 1
 
 # ajout dans le panier d'une déclinaison d'un article (si 1 declinaison : immédiat sinon => vu pour faire un choix
-    # sql = '''    '''
+    #sql = '''    '''
     # mycursor.execute(sql, (id_article))
     # declinaisons = mycursor.fetchall()
     # if len(declinaisons) == 1:
@@ -37,6 +37,30 @@ def client_panier_add():
     #                                , article=article)
 
 # ajout dans le panier d'un article
+    quantite = int(quantite) if quantite else 1
+
+    # 2. On regarde si l'article est déjà dans le panier
+    sql = "SELECT * FROM ligne_panier WHERE utilisateur_id = %s AND jean_id = %s"
+    mycursor.execute(sql, (id_client, id_article))
+    article_panier = mycursor.fetchone()
+
+    if article_panier is not None:
+        # Il y est déjà : on fait +1 (ou +quantite)
+        # (Attention : si ta colonne s'appelle quantite_panier, modifie le mot "quantite" ici !)
+        sql_update = "UPDATE ligne_panier SET quantite_panier = quantite_panier + %s WHERE utilisateur_id = %s AND jean_id = %s"
+        mycursor.execute(sql_update, (quantite, id_client, id_article))
+    else:
+        # Il n'y est pas : on le crée
+        sql_insert = "INSERT INTO ligne_panier (utilisateur_id, jean_id, quantite_panier) VALUES (%s, %s, %s)"
+        mycursor.execute(sql_insert, (id_client, id_article, quantite))
+
+    # 3. On baisse le stock de la table jean
+    sql_stock = "UPDATE jean SET stock_ = stock_ - %s WHERE id_jean = %s"
+    mycursor.execute(sql_stock, (quantite, id_article))
+
+    # On valide les changements dans la base de données
+    get_db().commit()
+
 
 
     return redirect('/client/article/show')
@@ -52,20 +76,21 @@ def client_panier_delete():
     # partie 2 : on supprime une déclinaison de l'article
     # id_declinaison_article = request.form.get('id_declinaison_article', None)
 
-    sql = ''' selection de la ligne du panier pour l'article et l'utilisateur connecté'''
-    article_panier=[]
+    sql = ''' SELECT * FROM ligne_panier WHERE utilisateur_id = %s AND jean_id = %s'''
+    mycursor.execute(sql, (id_client, id_article))
+    article_panier = mycursor.fetchone()
 
-    if not(article_panier is None) and article_panier['quantite'] > 1:
-        sql = '''UPDATE ligne_panier SET quantite = quantite-%s  WHERE utilisateur_id = %s AND stylo_id=%s'''
+    if not(article_panier is None) and article_panier['quantite_panier'] > 1:
+        sql = '''UPDATE ligne_panier SET quantite_panier = quantite_panier-%s  WHERE utilisateur_id = %s AND jean_id=%s'''
         mycursor.execute(sql, (quantite, id_client, id_article))
 
     else:
-        sql = '''DELETE FROM ligne_panier WHERE utilisateur_id = %s AND stylo_id=%s'''
+        sql = '''DELETE FROM ligne_panier WHERE utilisateur_id = %s AND jean_id=%s'''
         mycursor.execute(sql, (id_client, id_article))
 
     # mise à jour du stock de l'article disponible
     get_db().commit()
-    mycursor.execute("UPDATE ***** SET stock = stock + %s WHERE id=%s", (quantite, id_article))
+    mycursor.execute("UPDATE jean SET stock_ = stock_ + %s WHERE id_jean=%s", (quantite, id_article))
     return redirect('/client/article/show')
 
 
@@ -106,14 +131,20 @@ def client_panier_filtre():
     filter_word = request.form.get('filter_word', None)
     filter_prix_min = request.form.get('filter_prix_min', None)
     filter_prix_max = request.form.get('filter_prix_max', None)
-    filter_types = request.form.getlist('filter_types', None)
+    filter_types = request.form.getlist('filter_types')
     # test des variables puis
-    # mise en session des variables
+    session['filter_word'] = filter_word
+    session['filter_prix_min'] = filter_prix_min
+    session['filter_prix_max'] = filter_prix_max
+    session['filter_types'] = filter_types
     return redirect('/client/article/show')
 
 
 @client_panier.route('/client/panier/filtre/suppr', methods=['POST'])
 def client_panier_filtre_suppr():
-    # suppression  des variables en session
+    session.pop('filter_word', None)
+    session.pop('filter_prix_min', None)
+    session.pop('filter_prix_max', None)
+    session.pop('filter_types', None)
     print("suppr filtre")
     return redirect('/client/article/show')
