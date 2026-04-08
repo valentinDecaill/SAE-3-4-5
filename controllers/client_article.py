@@ -16,18 +16,25 @@ def client_article_show():
     id_client = session['id_user']
 
     sql = '''
-            SELECT id_jean AS id_article, 
-                   nom_jean AS nom, 
-                   prix_jean AS prix, 
-                   stock_ AS stock, 
-                   photo AS image, 
-                   nom_coupe, 
-                   nom_taille
-            FROM jean
-            INNER JOIN coupe_jean ON jean.coupe_jean_id = coupe_jean.id_coupe_jean
-            INNER JOIN taille ON jean.taille_id = taille.id_taille
-            WHERE 1=1
+          SELECT jean.id_jean                               AS id_article,
+                 jean.nom_jean                              AS nom,
+                 jean.prix_jean                             AS prix,
+                 jean.stock_                                AS stock,
+                 jean.photo                                 AS image,
+                 coupe_jean.nom_coupe,
+                 taille.nom_taille,
+                 COUNT(DISTINCT commentaire.id_commentaire) AS nb_avis,
+                 COUNT(DISTINCT note.id_utilisateur)        AS nb_notes,
+                 ROUND(AVG(note.valeur), 1)                 AS moy_notes
+          FROM jean
+                   INNER JOIN coupe_jean ON jean.coupe_jean_id = coupe_jean.id_coupe_jean
+                   INNER JOIN taille ON jean.taille_id = taille.id_taille
+                   LEFT JOIN commentaire ON jean.id_jean = commentaire.id_jean
+                   LEFT JOIN note ON jean.id_jean = note.id_jean
+          WHERE 1 = 1
+          GROUP BY jean.id_jean 
           '''
+
     mycursor.execute(sql)
     articles = mycursor.fetchall()
     list_param = []

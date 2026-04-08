@@ -84,7 +84,27 @@ CREATE TABLE ligne_panier(
    FOREIGN KEY(utilisateur_id) REFERENCES utilisateur(id_utilisateur)
 );
 
+CREATE TABLE note (
+           id_utilisateur INT,
+           id_jean INT NOT NULL,
+           valeur INT NOT NULL CHECK (valeur >= 1 AND valeur <= 5),
+           PRIMARY KEY(id_utilisateur, id_jean),
+           FOREIGN KEY(id_utilisateur) REFERENCES utilisateur(id_utilisateur),
+           FOREIGN KEY(id_jean) REFERENCES jean(id_jean)
+        );
 
+        CREATE TABLE commentaire (
+           id_commentaire INT AUTO_INCREMENT,
+           contenu VARCHAR(255) NOT NULL,
+           date_publication DATETIME DEFAULT CURRENT_TIMESTAMP,
+           etat_validation TINYINT(1) DEFAULT 0,
+           reponse_admin VARCHAR(255) DEFAULT NULL,
+           id_utilisateur INT,
+           id_jean INT NOT NULL,
+           PRIMARY KEY(id_commentaire),
+           FOREIGN KEY(id_utilisateur) REFERENCES utilisateur(id_utilisateur),
+           FOREIGN KEY(id_jean) REFERENCES jean(id_jean)
+        );
 
 -- MLD
 -- taille = (id_taille INT, nom_taille VARCHAR(255));

@@ -67,6 +67,18 @@ INSERT INTO commande (id_commande, date_achat, utilisateur_id, etat_id) VALUES
 INSERT INTO commande (id_commande, date_achat, utilisateur_id, etat_id) VALUES
 (102, '2023-10-28', 3, 2);
 
+INSERT INTO note (id_utilisateur, id_jean, valeur) VALUES
+(2, 1, 5),
+(3, 1, 4),
+(3, 2, 3);
+
+INSERT INTO commentaire (contenu, etat_validation, reponse_admin, id_utilisateur, id_jean) VALUES
+('Super jean !', 1, 'Merci pour votre retour.', 2, 1),
+('Taille un peu petit.', 0, NULL, 3, 1),
+('Couleur parfaite.', 1, NULL, 3, 2);
+
+INSERT INTO ligne_commande (jean_id, commande_id, quantite_commande, prix) VALUES
+(1, 101, 1, 99.90);
 
 
 

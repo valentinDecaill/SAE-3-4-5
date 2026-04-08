@@ -9,19 +9,19 @@ DROP TABLE IF EXISTS coupe_jean;
 DROP TABLE IF EXISTS taille;
 
 CREATE TABLE taille(
-   id_taille INT,
+   id_taille INT AUTO_INCREMENT,
    nom_taille VARCHAR(255) NOT NULL,
    PRIMARY KEY(id_taille)
 );
 
 CREATE TABLE coupe_jean(
-   id_coupe_jean INT,
+   id_coupe_jean INT AUTO_INCREMENT,
    nom_coupe VARCHAR(255) NOT NULL,
    PRIMARY KEY(id_coupe_jean)
 );
 
 CREATE TABLE utilisateur(
-   id_utilisateur INT,
+   id_utilisateur INT AUTO_INCREMENT,
    login VARCHAR(255),
    email VARCHAR(255),
    nom VARCHAR(255),
@@ -31,13 +31,13 @@ CREATE TABLE utilisateur(
 );
 
 CREATE TABLE etat(
-   id_etat INT,
+   id_etat INT AUTO_INCREMENT,
    libelle VARCHAR(255),
    PRIMARY KEY(id_etat)
 );
 
 CREATE TABLE jean(
-   id_jean INT,
+   id_jean INT AUTO_INCREMENT,
    nom_jean VARCHAR(255) NOT NULL,
    matiere VARCHAR(255),
    couleur VARCHAR(255),
@@ -55,7 +55,7 @@ CREATE TABLE jean(
 );
 
 CREATE TABLE commande(
-   id_commande INT,
+   id_commande INT AUTO_INCREMENT,
    date_achat DATE,
    utilisateur_id INT NOT NULL,
    etat_id INT NOT NULL,
@@ -82,6 +82,31 @@ CREATE TABLE ligne_panier(
    PRIMARY KEY(jean_id, utilisateur_id),
    FOREIGN KEY(jean_id) REFERENCES jean(id_jean),
    FOREIGN KEY(utilisateur_id) REFERENCES utilisateur(id_utilisateur)
+);
+
+
+-- Partie ajouter pour les commentaires
+
+CREATE TABLE note (
+   id_utilisateur INT,
+   id_jean INT NOT NULL,
+   valeur INT NOT NULL CHECK (valeur >= 1 AND valeur <= 5),
+   PRIMARY KEY(id_utilisateur, id_jean),
+   FOREIGN KEY(id_utilisateur) REFERENCES utilisateur(id_utilisateur),
+   FOREIGN KEY(id_jean) REFERENCES jean(id_jean)
+);
+
+CREATE TABLE commentaire (
+   id_commentaire INT AUTO_INCREMENT,
+   contenu VARCHAR(255) NOT NULL,
+   date_publication DATETIME DEFAULT CURRENT_TIMESTAMP,
+   etat_validation TINYINT(1) DEFAULT 0,
+   reponse_admin VARCHAR(255) DEFAULT NULL,
+   id_utilisateur INT,
+   id_jean INT NOT NULL,
+   PRIMARY KEY(id_commentaire),
+   FOREIGN KEY(id_utilisateur) REFERENCES utilisateur(id_utilisateur),
+   FOREIGN KEY(id_jean) REFERENCES jean(id_jean)
 );
 
 
