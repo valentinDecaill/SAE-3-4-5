@@ -1,79 +1,88 @@
 {% extends 'admin/layout_admin.html' %}
 
 {% block title %}
-    <title>commentaire d'un article</title>
+    <title>Commentaires d'un article</title>
 {% endblock %}
 
 {% block body %}
-
    <div class="row">
-   <div class="col-5 bg-light p-3">
-        <h3>Les commentaires (dates décroissantes)</h3>
-       <h3>article  <span style="color: green">{{ article.nom }}</span></h3>
-       {% if nb_commentaires.nb_commentaires_total is defined %}  <strong> {{ nb_commentaires.nb_commentaires_total }}</strong> commentaire(s)
-           dont {% if nb_commentaires.nb_commentaires_valider is defined %}<strong>
-                    {{ nb_commentaires.nb_commentaires_valider }}</strong> commentaire(s) validé(s)
-                {% endif %}
-        {% else %} Pas de commentaire
-       {% endif %}
-       <br>Note : {% if article.nb_notes is defined and article.nb_notes >= 0 %} <strong>{{ article.moyenne_notes }}</strong> ( {{ article.nb_notes }} note(s))
-       {% else %} Pas de note
-       {% endif %}
-   </div>
+       <div class="col-8 bg-light p-3 rounded mb-4">
+           <h3>Les commentaires</h3>
+           <h4>Article : <span style="color: green">{{ article.nom }}</span></h4>
+
+           {% if nb_commentaires.nb_commentaires_total > 0 %}
+                <strong> {{ nb_commentaires.nb_commentaires_total }}</strong> commentaire(s) au total,
+                dont <strong>{{ nb_commentaires.nb_commentaires_valider }}</strong> commentaire(s) validé(s).
+           {% else %}
+                <p>Pas de commentaire.</p>
+           {% endif %}
+       </div>
    </div>
 
    <div class="row">
-
         <table class="table" style="border: solid #8959A8 1px ">
         {% if commentaires %}
             <thead class="thead-dark">
             <tr>
-                <th>nom(pseudo)</th>
-                <th>Commentaires</th>
-                <th></th>
+                <th style="width: 20%;">nom(pseudo)</th>
+                <th style="width: 60%;">Commentaires</th>
+                <th style="width: 20%;">Actions</th>
             </tr>
             </thead>
             <tbody>
-
                 {% for commentaire in commentaires %}
-                    {% if commentaire.valider == 1 and session['id_user']==commentaire.utilisateur_id %}
-                    <tr class="bg-success bg-opacity-25">
-                    {% elif commentaire.valider == 1 %}
-                    <tr class="bg-warning bg-opacity-25">
-                    {% else %}
-                    <tr>
-                    {% endif %}
-                        <td>{{ commentaire.nom }}({{ commentaire.id_utilisateur }})</td>
-                        <td> {% if commentaire.utilisateur_id == session['id_user'] %}
-                            <span style="color: red">(réponse de l'administrateur du site (webmaster) :</span>
-                            {% endif %}
-                            {{ commentaire.commentaire }}
-                        </td>
+
+                    {% if commentaire.etat_validation == 1 or commentaire.etat_validation == '1' %}
+                        <tr class="table-warning"> {% else %}
+                        <tr class="bg-white"> {% endif %}
+
                         <td>
-                                  <form  action="/admin/article/commentaires/delete"  style="display: inline-block;"  method="post" >
-                                      <input type="hidden" name="id_article" value="{{ commentaire.id_article }}">
-                                      <input type="hidden" name="id_utilisateur" value="{{ commentaire.id_utilisateur }}">
-                                      <input type="hidden" name="date_publication" value="{{ commentaire.date_publication }}">
-                                      <button class="btn btn-primary" > supprimer </button>
-                                  </form>
-                            {% if commentaire.utilisateur_id != session['id_user'] %}
-                                  <form  action="/admin/article/commentaires/repondre"  style="display: inline-block;"  method="GET" >
-                                      <input type="hidden" name="id_article" value="{{ commentaire.id_article }}">
-                                      <input type="hidden" name="id_utilisateur" value="{{ commentaire.id_utilisateur }}">
-                                      <input type="hidden" name="date_publication" value="{{ commentaire.date_publication }}">
-                                      <button class="btn btn-primary" > répondre </button>
-                                  </form>
+                            <strong>{{ commentaire.nom }}</strong> <br>
+                            <small class="text-muted">({{ commentaire.id_utilisateur }})</small><br>
+                            <small>{{ commentaire.date_publication.strftime('%d/%m/%Y %H:%M') }}</small>
+                        </td>
+
+                        <td>
+                            {{ commentaire.contenu }}
+
+                            {% if commentaire.etat_validation == 1 or commentaire.etat_validation == '1' %}
+                                <span style="color: red; font-weight:bold;">(v)</span>
+                            {% endif %}
+
+                            {% if commentaire.reponse_admin and commentaire.reponse_admin != '' %}
+                                <div class="alert alert-success mt-3 mb-1 p-2" style="background-color: #d4edda; border: 1px solid #c3e6cb;">
+                                    <span style="color: red; font-weight: bold;">(réponse de l'administrateur du site (webmaster) ) :</span><br>
+                                    <span style="color: #155724;">{{ commentaire.reponse_admin }}</span>
+                                </div>
+                            {% endif %}
+                        </td>
+
+                        <td>
+                            <form action="/admin/article/commentaires/delete" style="display: inline-block;" method="post">
+                                <input type="hidden" name="id_article" value="{{ commentaire.id_jean }}">
+                                <input type="hidden" name="id_commentaire" value="{{ commentaire.id_commentaire }}">
+                                <button class="btn btn-danger btn-sm mb-1">supprimer</button>
+                            </form>
+
+                            {% if not commentaire.reponse_admin %}
+                            <form action="/admin/article/commentaires/repondre" style="display: inline-block;" method="GET">
+                                <input type="hidden" name="id_article" value="{{ commentaire.id_jean }}">
+                                <input type="hidden" name="id_commentaire" value="{{ commentaire.id_commentaire }}">
+                                <button class="btn btn-primary btn-sm mb-1">répondre</button>
+                            </form>
                             {% endif %}
                         </td>
                     </tr>
                 {% endfor %}
             {% else %}
-                <tr class="table-warning"><td>Pas de commentaire</td><td></td></tr>
+                <tr class="table-warning"><td colspan="3" class="text-center">Pas de commentaire</td></tr>
             {% endif %}
             </tbody>
         </table>
-       <a class="btn btn-primary m-4 col-2" href="/admin/article/commentaires/valider?id_article={{ article.id_article }}">valider les commenaires</a>
-       <a class="btn btn-outline-primary btn-lg" href="/admin/article/show">Retour vers la page d'accueil</a>
-    </div>
 
+        <div class="col-12 mt-3 mb-5">
+            <a class="btn btn-success m-2" href="/admin/article/commentaires/valider?id_article={{ article.id_article }}">valider les commentaires</a>
+            <a class="btn btn-outline-secondary m-2" href="/admin/article/show">Retour vers la liste</a>
+        </div>
+    </div>
 {% endblock %}

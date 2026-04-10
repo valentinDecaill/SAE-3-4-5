@@ -1,65 +1,77 @@
 #! /usr/bin/python
 # -*- coding:utf-8 -*-
-from flask import Blueprint
-from flask import Flask, request, render_template, redirect, abort, flash, session
-
+from flask import Blueprint, request, render_template
 from connexion_db import get_db
 
-admin_dataviz = Blueprint('admin_dataviz', __name__,
-                        template_folder='templates')
+admin_dataviz = Blueprint('admin_dataviz', __name__, template_folder='templates')
+
 
 @admin_dataviz.route('/admin/dataviz/etat1')
 def show_type_article_stock():
     mycursor = get_db().cursor()
-    sql = '''
-    
-           '''
-    # mycursor.execute(sql)
-    # datas_show = mycursor.fetchall()
-    # labels = [str(row['libelle']) for row in datas_show]
-    # values = [int(row['nbr_articles']) for row in datas_show]
+    id_categorie = request.args.get('id_categorie', None)
 
-    # sql = '''
-    #         
-    #        '''
-    datas_show=[]
-    labels=[]
-    values=[]
+    if id_categorie is None:
 
-    return render_template('admin/dataviz/dataviz_etat_1.html'
-                           , datas_show=datas_show
-                           , labels=labels
-                           , values=values)
+        sql = '''
+              SELECT c.id_coupe_jean, 
+                     c.nom_coupe                                 AS libelle, 
+                     COUNT(DISTINCT n.id_utilisateur, n.id_jean) AS nb_notes, 
+                     IFNULL(ROUND(AVG(n.valeur), 1), 0)          AS note_moyenne, 
+                     COUNT(DISTINCT com.id_commentaire)          AS nb_commentaires
+              FROM coupe_jean c
+                       LEFT JOIN jean j ON c.id_coupe_jean = j.coupe_jean_id
+                       LEFT JOIN note n ON j.id_jean = n.id_jean
+                       LEFT JOIN commentaire com ON j.id_jean = com.id_jean
+              GROUP BY c.id_coupe_jean, c.nom_coupe 
+              '''
+        mycursor.execute(sql)
+        datas_show = mycursor.fetchall()
 
+        # données pour les graphiques
+        labels = [d['libelle'] for d in datas_show]
+        valeurs_notes = [d['nb_notes'] for d in datas_show]
+        valeurs_moyennes = [d['note_moyenne'] for d in datas_show]
+        valeurs_commentaires = [d['nb_commentaires'] for d in datas_show]
 
-# sujet 3 : adresses
+        return render_template('admin/dataviz/dataviz_etat_1.html',
+                               datas_show=datas_show,
+                               labels=labels,
+                               valeurs_notes=valeurs_notes,
+                               valeurs_moyennes=valeurs_moyennes,
+                               valeurs_commentaires=valeurs_commentaires)
 
+    else:
 
-@admin_dataviz.route('/admin/dataviz/etat2')
-def show_dataviz_map():
-    # mycursor = get_db().cursor()
-    # sql = '''    '''
-    # mycursor.execute(sql)
-    # adresses = mycursor.fetchall()
+        # nom de la catégorie pour l'affichage
+        mycursor.execute("SELECT nom_coupe FROM coupe_jean WHERE id_coupe_jean = %s", (id_categorie,))
+        cat_info = mycursor.fetchone()
+        nom_categorie = cat_info['nom_coupe'] if cat_info else "Catégorie"
 
-    #exemples de tableau "résultat" de la requête
-    adresses =  [{'dep': '25', 'nombre': 1}, {'dep': '83', 'nombre': 1}, {'dep': '90', 'nombre': 3}]
+        sql = '''
+              SELECT j.nom_jean                         AS libelle, 
+                     COUNT(DISTINCT n.id_utilisateur)   AS nb_notes, 
+                     IFNULL(ROUND(AVG(n.valeur), 1), 0) AS note_moyenne, 
+                     COUNT(DISTINCT com.id_commentaire) AS nb_commentaires
+              FROM jean j
+                       LEFT JOIN note n ON j.id_jean = n.id_jean
+                       LEFT JOIN commentaire com ON j.id_jean = com.id_jean
+              WHERE j.coupe_jean_id = %s
+              GROUP BY j.id_jean, j.nom_jean 
+              '''
+        mycursor.execute(sql, (id_categorie,))
+        datas_detail = mycursor.fetchall()
 
-    # recherche de la valeur maxi "nombre" dans les départements
-    # maxAddress = 0
-    # for element in adresses:
-    #     if element['nbr_dept'] > maxAddress:
-    #         maxAddress = element['nbr_dept']
-    # calcul d'un coefficient de 0 à 1 pour chaque département
-    # if maxAddress != 0:
-    #     for element in adresses:
-    #         indice = element['nbr_dept'] / maxAddress
-    #         element['indice'] = round(indice,2)
+        # données pour les graphiques détaillés
+        labels = [d['libelle'] for d in datas_detail]
+        valeurs_notes = [d['nb_notes'] for d in datas_detail]
+        valeurs_moyennes = [d['note_moyenne'] for d in datas_detail]
+        valeurs_commentaires = [d['nb_commentaires'] for d in datas_detail]
 
-    print(adresses)
-
-    return render_template('admin/dataviz/dataviz_etat_map.html'
-                           , adresses=adresses
-                          )
-
-
+        return render_template('admin/dataviz/dataviz_etat_1.html',
+                               datas_detail=datas_detail,
+                               nom_categorie=nom_categorie,
+                               labels=labels,
+                               valeurs_notes=valeurs_notes,
+                               valeurs_moyennes=valeurs_moyennes,
+                               valeurs_commentaires=valeurs_commentaires)

@@ -17,20 +17,28 @@ admin_article = Blueprint('admin_article', __name__,
 @admin_article.route('/admin/article/show')
 def show_article():
     mycursor = get_db().cursor()
+
     sql = '''
-    SELECT j.id_jean AS id_article, 
-               j.nom_jean AS nom, 
-               j.prix_jean AS prix, 
-               j.stock_ AS stock, 
-               j.photo AS image, 
-               c.nom_coupe AS libelle,
-               c.id_coupe_jean AS type_article_id
-        FROM jean j
-        LEFT JOIN coupe_jean c ON j.coupe_jean_id = c.id_coupe_jean
-        ORDER BY j.nom_jean;
-    '''
+          SELECT jean.id_jean                                    AS id_article,
+                 jean.nom_jean                                   AS nom,
+                 jean.prix_jean                                  AS prix,
+                 jean.stock_                                     AS stock,
+                 jean.photo                                      AS image,
+                 coupe_jean.nom_coupe,
+                 taille.nom_taille,
+                 COUNT(commentaire.id_commentaire)               AS nb_commentaires_total,
+                 IFNULL(SUM(commentaire.etat_validation = 1), 0) AS nb_commentaires_valides,
+                 IFNULL(SUM(commentaire.etat_validation = 0), 0) AS nb_commentaires_nouveaux
+          FROM jean
+                   INNER JOIN coupe_jean ON jean.coupe_jean_id = coupe_jean.id_coupe_jean
+                   INNER JOIN taille ON jean.taille_id = taille.id_taille
+                   LEFT JOIN commentaire ON jean.id_jean = commentaire.id_jean
+          GROUP BY jean.id_jean
+          ORDER BY jean.nom_jean 
+          '''
     mycursor.execute(sql)
     articles = mycursor.fetchall()
+
     return render_template('admin/article/show_article.html', articles=articles)
 
 

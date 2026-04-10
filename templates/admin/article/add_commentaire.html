@@ -1,27 +1,33 @@
 {% extends 'admin/layout_admin.html' %}
 
 {% block title %}
-    <title>commentaire d'un article</title>
+    <title>Répondre à un commentaire</title>
 {% endblock %}
 
 {% block body %}
-<h3>article</h3>
-   <div class="row">
-            <div class="col-5 bg-light p-3">
-        <h3>répondre à un commentaire</h3>
+<div class="container mt-5">
+    <div class="row">
+        <div class="col-md-8 offset-md-2">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h4>Répondre au commentaire</h4>
+                </div>
+                <div class="card-body">
+                    <form action="/admin/article/commentaires/repondre" method="POST">
+                        <input type="hidden" name="id_commentaire" value="{{ id_commentaire }}">
+                        <input type="hidden" name="id_article" value="{{ id_article }}">
+
+                        <div class="form-group mb-3">
+                            <label for="reponse">Votre réponse :</label>
+                            <textarea name="reponse" id="reponse" class="form-control" rows="4" required></textarea>
+                        </div>
+
+                        <button type="submit" class="btn btn-success">Publier la réponse</button>
+                        <a href="/admin/article/commentaires?id_article={{ id_article }}" class="btn btn-secondary">Annuler</a>
+                    </form>
+                </div>
             </div>
-                 <form  action="/admin/article/commentaires/repondre"  style="display: inline-block;"  method="post" >
-                      <input type="hidden" name="id_article" value="{{ id_article }}">
-                      <input type="hidden" name="id_utilisateur" value="{{ id_utilisateur }}">
-                      <input type="hidden" name="date_publication" value="{{ date_publication }}">
-                      <div class="col">
-                       <label for="input_commentaire" class="form-label">Mettez un commentaire sur cet article : </label>
-                      <textarea name="commentaire" class="form-control" aria-label="Votre commentaire" id="input_commentaire"  placeholder="Votre commentaire"></textarea>
-                      </div>
-                      <button class="btn btn-primary mt-4 mb-4" href="/admin/article/commentaires/repondre"> répondre </button>
-                 </form>
-
-        <a class="btn btn-outline-primary btn-lg" href="/admin/article/show">Retour vers la page d'accueil</a>
+        </div>
     </div>
-
+</div>
 {% endblock %}

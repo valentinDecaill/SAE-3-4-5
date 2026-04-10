@@ -188,18 +188,46 @@ def fct_fixtures_load():
         (102, '2023-10-28', 3, 2);
         
         -- insert partie commentaires et notes
-        INSERT INTO note (id_utilisateur, id_jean, valeur) VALUES
-        (2, 1, 5),
-        (3, 1, 4),
-        (3, 2, 3);
         
+        INSERT INTO utilisateur (id_utilisateur, login, password, role, nom) VALUES
+        (10, 'client10', 'pbkdf2:sha256:600000$xxxxxx$xxxxxx', 'ROLE_client', 'Petit'),
+        (11, 'client11', 'pbkdf2:sha256:600000$xxxxxx$xxxxxx', 'ROLE_client', 'Leroy');
+
+
+        INSERT INTO commande (id_commande, date_achat, utilisateur_id, etat_id) VALUES
+        (201, '2024-01-01 10:00:00', 2, 1),
+        (202, '2024-01-02 11:00:00', 3, 1),
+        (203, '2024-01-03 12:00:00', 10, 1),
+        (204, '2024-01-04 14:00:00', 11, 1);
+    
+        INSERT INTO ligne_commande (commande_id, jean_id, prix, quantite_commande) VALUES
+        (201, 1, 49.99, 1), (201, 3, 45.00, 1), (201, 4, 65.00, 1),
+        (202, 2, 59.99, 1), (202, 5, 55.00, 1), (202, 1, 49.99, 1),
+        (203, 3, 45.00, 1), (203, 5, 55.00, 2),
+        (204, 1, 49.99, 1), (204, 2, 59.99, 1), (204, 4, 65.00, 1);
+    
+    
+        INSERT INTO note (id_utilisateur, id_jean, valeur) VALUES
+        (2, 1, 5), (2, 3, 4), (2, 4, 3),
+        (3, 2, 2), (3, 5, 4), (3, 1, 5),
+        (10, 3, 5), (10, 5, 3),
+        (11, 1, 4), (11, 2, 4), (11, 4, 5);
+    
         INSERT INTO commentaire (contenu, etat_validation, reponse_admin, id_utilisateur, id_jean) VALUES
-        ('Super jean !', 1, 'Merci pour votre retour.', 2, 1),
-        ('Taille un peu petit.', 0, NULL, 3, 1),
-        ('Couleur parfaite.', 1, NULL, 3, 2);
-            
-        INSERT INTO ligne_commande (jean_id, commande_id, quantite_commande, prix) VALUES 
-        (1, 101, 1, 99.90);
+        ('client1test1', 1, 'admintest1', 2, 1),
+        ('client1test2', 0, NULL, 2, 3),
+        ('client1test3', 1, 'admintest2', 2, 4),
+    
+        ('client2test1', 1, NULL, 3, 2),
+        ('client2test2', 1, 'admintest3', 3, 5),
+        ('client2test3', 0, NULL, 3, 1),
+    
+        ('client10test1', 1, 'admintest4', 10, 3),
+        ('client10test2', 0, NULL, 10, 5),
+    
+        ('client11test1', 1, NULL, 11, 1),
+        ('client11test2', 1, 'admintest5', 11, 2),
+        ('client11test3', 
         
 
           '''
