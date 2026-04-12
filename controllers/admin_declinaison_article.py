@@ -18,19 +18,37 @@ def add_declinaison_article():
     mycursor.execute("SELECT id_jean AS id_article, nom_jean, photo AS image FROM jean WHERE id_jean = %s", id_article)
     article = mycursor.fetchone()
 
-    # 2. On récupère toutes les tailles et couleurs possibles
-    mycursor.execute("SELECT id_taille, nom_taille AS libelle FROM taille ORDER BY id_taille")
+
+    mycursor.execute("SELECT DISTINCT taille_id FROM declinaison WHERE jean_id = %s", (id_article,))
+    tailles_utilisees = [row['taille_id'] for row in mycursor.fetchall()]
+
+    if 1 in tailles_utilisees:
+    # S'il y a déjà une Taille Unique, on ne propose QUE Taille Unique
+        mycursor.execute("SELECT id_taille, nom_taille AS libelle FROM taille WHERE id_taille = 1")
+    elif len(tailles_utilisees) > 0:
+    # S'il y a des tailles normales, on CACHE la Taille Unique (id 1)
+        mycursor.execute("SELECT id_taille, nom_taille AS libelle FROM taille WHERE id_taille > 1 ORDER BY id_taille")
+    else:
+    # S'il n'y a aucune déclinaison, on propose tout
+        mycursor.execute("SELECT id_taille, nom_taille AS libelle FROM taille ORDER BY id_taille")
     tailles = mycursor.fetchall()
 
-    mycursor.execute("SELECT id_couleur, nom_couleur AS libelle FROM couleur ORDER BY id_couleur")
+# --- LOGIQUE POINT 14 : GESTION DES COULEURS UNIQUES ---
+    mycursor.execute("SELECT DISTINCT couleur_id FROM declinaison WHERE jean_id = %s", (id_article,))
+    couleurs_utilisees = [row['couleur_id'] for row in mycursor.fetchall()]
+
+    if 1 in couleurs_utilisees:
+        mycursor.execute("SELECT id_couleur, nom_couleur AS libelle FROM couleur WHERE id_couleur = 1")
+    elif len(couleurs_utilisees) > 0:
+        mycursor.execute("SELECT id_couleur, nom_couleur AS libelle FROM couleur WHERE id_couleur > 1 ORDER BY id_couleur")
+    else:
+        mycursor.execute("SELECT id_couleur, nom_couleur AS libelle FROM couleur ORDER BY id_couleur")
     couleurs = mycursor.fetchall()
 
     return render_template('admin/article/add_declinaison_article.html',
-                           article=article,
-                           tailles=tailles,
-                           couleurs=couleurs,
-                           d_taille_uniq=0,
-                           d_couleur_uniq=0)
+                       article=article,
+                       tailles=tailles,
+                       couleurs=couleurs)
 
 
 @admin_declinaison_article.route('/admin/declinaison_article/add', methods=['POST'])
@@ -74,6 +92,7 @@ def edit_declinaison_article():
     '''
     mycursor.execute(sql_decli, id_declinaison_article)
     declinaison_article = mycursor.fetchone()
+    id_article = declinaison_article['article_id']
 
     mycursor.execute("SELECT id_taille, nom_taille AS libelle FROM taille ORDER BY id_taille")
     tailles = mycursor.fetchall()
@@ -81,12 +100,20 @@ def edit_declinaison_article():
     mycursor.execute("SELECT id_couleur, nom_couleur AS libelle FROM couleur ORDER BY id_couleur")
     couleurs = mycursor.fetchall()
 
+    mycursor.execute("SELECT DISTINCT taille_id FROM declinaison WHERE jean_id = %s", (id_article,))
+    tailles_utilisees = [row['taille_id'] for row in mycursor.fetchall()]
+    d_taille_uniq = 1 if 1 in tailles_utilisees else 0
+
+    mycursor.execute("SELECT DISTINCT couleur_id FROM declinaison WHERE jean_id = %s", (id_article,))
+    couleurs_utilisees = [row['couleur_id'] for row in mycursor.fetchall()]
+    d_couleur_uniq = 1 if 1 in couleurs_utilisees else 0
+
     return render_template('admin/article/edit_declinaison_article.html',
                            declinaison_article=declinaison_article,
                            tailles=tailles,
                            couleurs=couleurs,
-                           d_taille_uniq=0,
-                           d_couleur_uniq=0)
+                           d_taille_uniq=d_taille_uniq,
+                           d_couleur_uniq=d_couleur_uniq,)
 
 
 @admin_declinaison_article.route('/admin/declinaison_article/edit', methods=['POST'])
