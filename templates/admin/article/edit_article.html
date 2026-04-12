@@ -43,8 +43,8 @@ types_article : tableau de dictionnaires
                             {% endfor %}
                         </select>
                     </label>
-                    <label for="stock">Stock :
-                        <input name="stock" type="number" min="0" value="{{ article.stock }}" class="form-control">
+                    <label for="description">Description :
+                        <textarea name="description" class="form-control" rows="4">{{ article.description }}</textarea>
                     </label>
                     <button class="btn btn-primary mt-2">
                                 Modifier

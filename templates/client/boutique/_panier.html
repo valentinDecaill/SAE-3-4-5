@@ -11,26 +11,36 @@
             </tr>
             {% for item_panier in articles_panier %}
                 <tr>
-                    <td>{{ item_panier.nom }}</td>
+                    <td>{{ item_panier.nom }}
+                        {% if item_panier.taille %}
+                            <span style="color: #6c757d; font-size: 0.9em;">({{ item_panier.taille }} - {{ item_panier.couleur}})</span>
+
+                        {% endif %}
+                    </td>
                     <td>{{ item_panier.quantite }}</td>
                     <td>{{ item_panier.prix }} €</td>
                     <td>{{ "{:,.2f} €".format(item_panier.prix * item_panier.quantite) }}</td>
                     <td>
-                        {% if item_panier.stock > 0 %}
                         <form action="/client/panier/add" style="display: inline-block;" method="post">
                             <input type="hidden" name="quantite" value="1">
                             <input type="hidden" name="id_article" value="{{ item_panier.id_article }}">
+                            <input type="hidden" name="id_taille" value="{{ item_panier.taille_id }}">
+                            <input type="hidden" name="id_couleur" value="{{ item_panier.couleur_id }}">
                             <button class="btn btn-primary"> + </button>
                         </form>
-                        {% endif %}
+
 
                         <form action="/client/panier/delete" style="display: inline-block;" method="post">
                             <input type="hidden" name="id_article" value="{{ item_panier.id_article }}">
+                            <input type="hidden" name="id_taille" value="{{ item_panier.taille_id }}">
+                            <input type="hidden" name="id_couleur" value="{{ item_panier.couleur_id }}">
                             <button class="btn btn-primary"> - </button>
                         </form>
 
                         <form action="/client/panier/delete/line" style="display: inline-block;" method="post">
                             <input type="hidden" name="id_article" value="{{ item_panier.id_article }}">
+                            <input type="hidden" name="id_taille" value="{{ item_panier.taille_id }}">
+                            <input type="hidden" name="id_couleur" value="{{ item_panier.couleur_id }}">
                             <button class="btn btn-primary"> Supprimer </button>
                         </form>
                     </td>

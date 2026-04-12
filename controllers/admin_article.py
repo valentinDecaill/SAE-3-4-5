@@ -22,18 +22,20 @@ def show_article():
           SELECT jean.id_jean                                    AS id_article,
                  jean.nom_jean                                   AS nom,
                  jean.prix_jean                                  AS prix,
-                 jean.stock_                                     AS stock,
                  jean.photo                                      AS image,
-                 coupe_jean.nom_coupe,
-                 taille.nom_taille,
+                 coupe_jean.nom_coupe                            AS libelle,
+                 coupe_jean.id_coupe_jean                        AS type_article_id,
                  COUNT(commentaire.id_commentaire)               AS nb_commentaires_total,
                  IFNULL(SUM(commentaire.etat_validation = 1), 0) AS nb_commentaires_valides,
-                 IFNULL(SUM(commentaire.etat_validation = 0), 0) AS nb_commentaires_nouveaux
+                 IFNULL(SUM(commentaire.etat_validation = 0), 0) AS nb_commentaires_nouveaux,
+                 COUNT(DISTINCT declinaison.id_declinaison)      AS nb_declinaisons,
+                 IFNULL(SUM(declinaison.stock = 0), 0)           AS nb_ruptures,
+                 IFNULL(SUM(declinaison.stock), jean.stock_)     AS stock
           FROM jean
-                   INNER JOIN coupe_jean ON jean.coupe_jean_id = coupe_jean.id_coupe_jean
-                   INNER JOIN taille ON jean.taille_id = taille.id_taille
+                   LEFT JOIN coupe_jean ON jean.coupe_jean_id = coupe_jean.id_coupe_jean
                    LEFT JOIN commentaire ON jean.id_jean = commentaire.id_jean
-          GROUP BY jean.id_jean
+                   LEFT JOIN declinaison ON jean.id_jean = declinaison.jean_id
+          GROUP BY jean.id_jean, coupe_jean.nom_coupe, coupe_jean.id_coupe_jean
           ORDER BY jean.nom_jean 
           '''
     mycursor.execute(sql)
@@ -46,10 +48,12 @@ def show_article():
 def add_article():
     mycursor = get_db().cursor()
 
+    sql = "SELECT id_coupe_jean AS id_type_article, nom_coupe AS libelle FROM coupe_jean ORDER BY nom_coupe"
+    mycursor.execute(sql)
+    types_article = mycursor.fetchall()
+
     return render_template('admin/article/add_article.html'
-                           #,types_article=type_article,
-                           #,couleurs=colors
-                           #,tailles=tailles
+                           ,types_article=types_article
                             )
 
 
@@ -71,7 +75,7 @@ def valid_add_article():
         filename=None
 
     sql = '''
-     INSERT INTO jean (nom_jean, photo, prix_jean, coupe_jean_id, stock_, image) 
+     INSERT INTO jean (nom_jean, photo, prix_jean, coupe_jean_id, stock_) 
         VALUES (%s, %s, %s, %s, %s)'''
 
     tuple_add = (nom, filename, prix, type_article_id, stock)
@@ -92,11 +96,12 @@ def delete_article():
     id_article=request.args.get('id_article')
     mycursor = get_db().cursor()
     sql = ''' 
-     SELECT COUNT(*) AS nb_declinaison FROM ligne_commande WHERE jean_id = %s
+     SELECT COUNT(*) AS nb_commandes FROM ligne_commande WHERE jean_id = %s
      '''
     mycursor.execute(sql, id_article)
-    nb_declinaison = mycursor.fetchone()
-    if nb_declinaison['nb_declinaison'] > 0:
+    resultat = mycursor.fetchone()
+
+    if resultat['nb_commandes'] > 0:
         message= u'il y a des declinaisons dans cet article : vous ne pouvez pas le supprimer'
         flash(message, 'alert-warning')
     else:
@@ -104,7 +109,15 @@ def delete_article():
         mycursor.execute(sql, id_article)
         article = mycursor.fetchone()
         print(article)
-        image = article['image']
+        image = article['image'] if article else None
+
+        mycursor.execute("DELETE FROM ligne_panier WHERE jean_id = %s", (id_article,))
+        mycursor.execute("DELETE FROM declinaison WHERE jean_id = %s", (id_article,))
+        mycursor.execute("DELETE FROM note WHERE id_jean = %s", (id_article,))
+        mycursor.execute("DELETE FROM commentaire WHERE id_jean = %s", (id_article,))
+
+        sql_delete_declinaison = "DELETE FROM declinaison WHERE jean_id = %s"
+        mycursor.execute(sql_delete_declinaison, id_article)
 
         sql = ''' DELETE FROM jean WHERE id_jean = %s  '''
         mycursor.execute(sql, id_article)
@@ -129,7 +142,7 @@ def edit_article():
                prix_jean AS prix, 
                photo AS image, 
                coupe_jean_id AS type_article_id,
-               stock_ AS stock 
+               description
         FROM jean 
         WHERE id_jean = %s 
     '''
@@ -142,16 +155,24 @@ def edit_article():
     mycursor.execute(sql)
     types_article = mycursor.fetchall()
 
-    # sql = '''
-    # requête admin_article_6
-    # '''
-    # mycursor.execute(sql, id_article)
-    # declinaisons_article = mycursor.fetchall()
+    sql_declinaison = '''
+     SELECT d.id_declinaison AS id_declinaison_article, 
+               d.stock, 
+               t.nom_taille AS libelle_taille,
+               c.nom_couleur AS libelle_couleur,
+               d.jean_id AS article_id
+        FROM declinaison d
+        JOIN taille t ON d.taille_id = t.id_taille
+        JOIN couleur c ON d.couleur_id = c.id_couleur
+        WHERE d.jean_id = %s
+     '''
+    mycursor.execute(sql_declinaison, id_article)
+    declinaisons_article = mycursor.fetchall()
 
     return render_template('admin/article/edit_article.html'
                            ,article=article
                            ,types_article=types_article
-                         #  ,declinaisons_article=declinaisons_article
+                           ,declinaisons_article=declinaisons_article
                            )
 
 
@@ -163,7 +184,7 @@ def valid_edit_article():
     image = request.files.get('image', '')
     type_article_id = request.form.get('type_article_id', '')
     prix = request.form.get('prix', '')
-    stock = request.form.get('stock')
+    description = request.form.get('description', '')
     sql = '''
        SELECT photo AS image FROM jean WHERE id_jean = %s
        '''
@@ -182,15 +203,15 @@ def valid_edit_article():
 
     sql = '''
      UPDATE jean 
-        SET nom_jean = %s, photo = %s, prix_jean = %s, coupe_jean_id = %s, stock_ = %s 
+        SET nom_jean = %s, photo = %s, prix_jean = %s, coupe_jean_id = %s, description = %s 
         WHERE id_jean = %s
         '''
-    mycursor.execute(sql, (nom, image_nom, prix, type_article_id, stock, id_article))
+    mycursor.execute(sql, (nom, image_nom, prix, type_article_id, description, id_article))
 
     get_db().commit()
     if image_nom is None:
         image_nom = ''
-    message = u'article modifié , nom:' + nom + '- type_article :' + type_article_id + ' - prix:' + prix  + ' - image:' + image_nom + ' - stock: ' + stock
+    message = u'article modifié , nom:' + nom + '- type_article :' + type_article_id + ' - prix:' + prix  + ' - image:' + image_nom + ' - description: ' + description
     flash(message, 'alert-success')
     return redirect('/admin/article/show')
 

@@ -19,20 +19,19 @@ def client_article_show():
           SELECT jean.id_jean                               AS id_article,
                  jean.nom_jean                              AS nom,
                  jean.prix_jean                             AS prix,
-                 jean.stock_                                AS stock,
                  jean.photo                                 AS image,
                  coupe_jean.nom_coupe,
-                 taille.nom_taille,
                  COUNT(DISTINCT commentaire.id_commentaire) AS nb_avis,
                  COUNT(DISTINCT note.id_utilisateur)        AS nb_notes,
-                 ROUND(AVG(note.valeur), 1)                 AS moy_notes
+                 ROUND(AVG(note.valeur), 1)                 AS moy_notes,
+                 COUNT(DISTINCT declinaison.id_declinaison) AS nb_declinaisons,
+                 IFNULL(SUM(declinaison.stock), 0) AS stock
           FROM jean
                    INNER JOIN coupe_jean ON jean.coupe_jean_id = coupe_jean.id_coupe_jean
-                   INNER JOIN taille ON jean.taille_id = taille.id_taille
                    LEFT JOIN commentaire ON jean.id_jean = commentaire.id_jean
                    LEFT JOIN note ON jean.id_jean = note.id_jean
+                   LEFT JOIN declinaison ON jean.id_jean = declinaison.jean_id
           WHERE 1 = 1
-          GROUP BY jean.id_jean 
           '''
 
     mycursor.execute(sql)
@@ -57,7 +56,7 @@ def client_article_show():
         condition_and += f" AND coupe_jean_id IN ({placeholders}) "
         list_param.extend(session['filter_types'])
 
-    sql += condition_and + " ORDER BY nom_jean;"
+    sql += condition_and + " GROUP BY jean.id_jean ORDER BY nom_jean;"
 
     mycursor.execute(sql, tuple(list_param))
     articles = mycursor.fetchall()
@@ -75,39 +74,37 @@ def client_article_show():
         except:
             quantite = 1
 
+        sql_check = "SELECT COUNT(*) AS nb FROM declinaison WHERE jean_id = %s"
+        mycursor.execute(sql_check, (id_article,))
+        nb_declinaison = mycursor.fetchone()['nb']
+
+        if nb_declinaison > 1:
+            return redirect(f'/client/article/details?id_article={id_article}')
+
         sql = "SELECT * FROM jean WHERE id_jean = %s"
         mycursor.execute(sql, (id_article,))
         article = mycursor.fetchone()
 
-        if article is not None and article['stock_'] >= quantite:
+        if id_article is not None:
+            return redirect(f'/client/article/details?id_article={id_article}')
 
-            sql = "SELECT * FROM ligne_panier WHERE jean_id = %s AND utilisateur_id = %s"
-            mycursor.execute(sql, (id_article, id_client))
-            article_panier = mycursor.fetchone()
 
-            if article_panier is not None and article_panier['quantite_panier'] >= 1:
-
-                sql = "UPDATE ligne_panier SET quantite_panier = quantite_panier + %s WHERE utilisateur_id = %s AND jean_id = %s"
-                mycursor.execute(sql, (quantite, id_client, id_article))
-            else:
-                sql = "INSERT INTO ligne_panier(utilisateur_id, jean_id, quantite_panier, date_ajout) VALUES (%s, %s, %s, NOW())"
-                mycursor.execute(sql, (id_client, id_article, quantite))
-
-            sql = "UPDATE jean SET stock_ = stock_ - %s WHERE id_jean = %s"
-            mycursor.execute(sql, (quantite, id_article))
-
-            get_db().commit()
-
-            return redirect('/client/article/show')
 
     sql = '''
-        SELECT ligne_panier.jean_id AS id_article, 
+        SELECT ligne_panier.jean_id AS id_article,
+               ligne_panier.taille_id,
+               ligne_panier.couleur_id,
                ligne_panier.quantite_panier AS quantite, 
                jean.nom_jean AS nom, 
                jean.prix_jean AS prix,
-               jean.stock_ AS stock
+               taille.nom_taille AS taille,
+               couleur.nom_couleur AS couleur,
+               declinaison.stock AS stock
         FROM ligne_panier
         JOIN jean ON ligne_panier.jean_id = jean.id_jean
+        JOIN taille ON ligne_panier.taille_id = taille.id_taille
+        JOIN couleur ON ligne_panier.couleur_id = couleur.id_couleur
+        LEFT JOIN declinaison ON ligne_panier.jean_id = declinaison.jean_id AND ligne_panier.taille_id = declinaison.taille_id AND ligne_panier.couleur_id = declinaison.couleur_id
         WHERE ligne_panier.utilisateur_id = %s
     '''
     mycursor.execute(sql, (id_client,))
@@ -127,45 +124,42 @@ def client_article_show():
                            items_filtre=types_article)
 
 
-@client_article.route('/client/panier/delete/line', methods=['POST'])
-def client_panier_delete_line():
+
+
+
+
+@client_article.route('/client/article/details', methods=['GET'])
+def client_article_details():
     mycursor = get_db().cursor()
-    id_client = session['id_user']
-    # On récupère l'ID envoyé par le formulaire caché
-    id_article = request.form.get('id_article')
-
-    sql = "SELECT quantite_panier FROM ligne_panier WHERE utilisateur_id = %s AND jean_id = %s"
-    mycursor.execute(sql, (id_client, id_article))
-    panier = mycursor.fetchone()
-    quantite_a_rendre = 0
-    if panier is not None:
-        quantite_a_rendre = panier['quantite_panier']
-
-    sql = "DELETE FROM ligne_panier WHERE utilisateur_id = %s AND jean_id = %s"
-    mycursor.execute(sql, (id_client, id_article))
-    sql = "UPDATE jean SET stock_ = stock_ + %s WHERE id_jean = %s"
-    mycursor.execute(sql, (quantite_a_rendre, id_article))
-
-    get_db().commit()
-    return redirect('/client/article/show')
+    id_article = request.args.get('id_article')
 
 
-@client_article.route('/client/panier/vider', methods=['POST'])
-def client_panier_vider():
-    mycursor = get_db().cursor()
-    id_client = session['id_user']
-    sql = "SELECT jean_id, quantite_panier FROM ligne_panier WHERE utilisateur_id = %s"
-    mycursor.execute(sql, (id_client,))
-    items_panier = mycursor.fetchall()
-    for item in items_panier:
-        id_article = item['jean_id']
-        quantite = item['quantite_panier']
-        sql_update = "UPDATE jean SET stock_ = stock_ + %s WHERE id_jean = %s"
-        mycursor.execute(sql_update, (quantite, id_article))
+    sql_article = '''
+        SELECT id_jean AS id_article,
+            nom_jean AS nom,
+            prix_jean AS prix,
+            photo AS image
+        FROM jean
+        WHERE id_jean = %s
+    '''
 
-    sql_delete = "DELETE FROM ligne_panier WHERE utilisateur_id = %s"
-    mycursor.execute(sql_delete, (id_client,))
+    mycursor.execute(sql_article, (id_article,))
+    article = mycursor.fetchone()
 
-    get_db().commit()
-    return redirect('/client/article/show')
+
+    sql_declinaisons = '''
+        SELECT d.id_declinaison AS id_declinaison_article, 
+        d.stock, 
+        t.nom_taille, 
+        t.id_taille,
+        c.nom_couleur
+        FROM declinaison d
+        JOIN taille t ON d.taille_id = t.id_taille
+        JOIN couleur c ON d.couleur_id = c.id_couleur
+        WHERE d.jean_id = %s
+    '''
+    mycursor.execute(sql_declinaisons, (id_article,))
+    declinaisons = mycursor.fetchall()
+
+    return render_template('client/boutique/declinaison_article.html', article=article, declinaisons=declinaisons)
 

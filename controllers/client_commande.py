@@ -14,12 +14,34 @@ client_commande = Blueprint('client_commande', __name__,
 def client_commande_valide():
     mycursor = get_db().cursor()
     id_client = session['id_user']
-    sql = ''' selection des articles d'un panier 
+    sql = ''' 
+    SELECT 
+            j.nom_jean AS nom,
+            lp.quantite_panier AS quantite,
+            j.prix_jean AS prix,
+            (lp.quantite_panier * j.prix_jean) AS sous_total,
+            t.nom_taille AS taille,
+            c.nom_couleur AS couleur
+        FROM ligne_panier lp
+        JOIN jean j ON lp.jean_id = j.id_jean
+        JOIN taille t ON lp.taille_id = t.id_taille
+        JOIN couleur c ON lp.couleur_id = c.id_couleur
+        WHERE lp.utilisateur_id = %s
     '''
+    mycursor.execute(sql, (id_client,))
+    articles_panier = mycursor.fetchall()
     articles_panier = []
     if len(articles_panier) >= 1:
-        sql = ''' calcul du prix total du panier '''
-        prix_total = None
+        sql = ''' 
+         SELECT SUM(lp.quantite_panier * j.prix_jean) AS total
+            FROM ligne_panier lp
+            JOIN jean j ON lp.jean_id = j.id_jean
+            WHERE lp.utilisateur_id = %s
+            '''
+        mycursor.execute(sql, (id_client,))
+        resultat = mycursor.fetchone()
+        prix_total = resultat['total']
+
     else:
         prix_total = None
     # etape 2 : selection des adresses
@@ -60,8 +82,8 @@ def client_commande_add():
 
     for item in items_panier:
 
-        tuple_delete = (id_client, item['jean_id'])
-        sql = "DELETE FROM ligne_panier WHERE utilisateur_id = %s AND jean_id = %s"
+        tuple_delete = (id_client, item['jean_id'], item['taille_id'], item['couleur_id'])
+        sql = "DELETE FROM ligne_panier WHERE utilisateur_id = %s AND jean_id = %s AND taille_id = %s AND couleur_id = %s"
         mycursor.execute(sql, tuple_delete)
 
 
@@ -70,8 +92,8 @@ def client_commande_add():
         prix = mycursor.fetchone()['prix']
 
 
-        sql = "INSERT INTO ligne_commande(commande_id, jean_id, prix, quantite_commande) VALUES (%s, %s, %s, %s)"
-        tuple_insert_ligne = (commande_id, item['jean_id'], prix, item['quantite_panier'])
+        sql = "INSERT INTO ligne_commande(commande_id, jean_id, taille_id,couleur_id, prix, quantite_commande) VALUES (%s, %s, %s, %s, %s, %s)"
+        tuple_insert_ligne = (commande_id, item['jean_id'], item['taille_id'], item['couleur_id'], prix, item['quantite_panier'])
         mycursor.execute(sql, tuple_insert_ligne)
 
 
@@ -118,9 +140,14 @@ def client_commande_show():
                 j.nom_jean AS nom,
                 lc.quantite_commande AS quantite,
                 lc.prix,
-                (lc.quantite_commande * lc.prix) AS prix_ligne
+                (lc.quantite_commande * lc.prix) AS prix_ligne,
+                t.nom_taille AS taille,
+                coul.nom_couleur AS couleur,
+                (SELECT COUNT(*) FROM declinaison WHERE jean_id = j.id_jean) AS nb_declinaisons
             FROM ligne_commande lc
             JOIN jean j ON lc.jean_id = j.id_jean
+            LEFT JOIN taille t ON lc.taille_id = t.id_taille
+            JOIN couleur coul ON lc.couleur_id = coul.id_couleur
             WHERE lc.commande_id = %s
         '''
         mycursor.execute(sql_details, (id_commande,))

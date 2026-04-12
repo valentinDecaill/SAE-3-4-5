@@ -36,7 +36,7 @@
                      {% if ligne.stock != None %}
                         {% if ligne.stock > 0 %}
                             <strong style="color: green">{{ ligne.stock }}</strong>
-                            {% if ligne.min_stock is defined and ligne.min_stock <= 0 %}
+                            {% if ligne.nb_ruptures is defined and ligne.nb_ruptures > 0 %}
                                 <span style="color: #fd7e14">(⚠️ déclinaison(s) en rupture)</span>
                             {% endif %}
                         {% else %}

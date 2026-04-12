@@ -6,25 +6,31 @@ from flask import request, render_template, redirect, flash
 from connexion_db import get_db
 
 admin_declinaison_article = Blueprint('admin_declinaison_article', __name__,
-                         template_folder='templates')
+                                      template_folder='templates')
 
 
-@admin_declinaison_article.route('/admin/declinaison_article/add')
+@admin_declinaison_article.route('/admin/declinaison_article/add', methods=['GET'])
 def add_declinaison_article():
-    id_article=request.args.get('id_article')
+    id_article = request.args.get('id_article')
     mycursor = get_db().cursor()
-    article=[]
-    couleurs=None
-    tailles=None
-    d_taille_uniq=None
-    d_couleur_uniq=None
-    return render_template('admin/article/add_declinaison_article.html'
-                           , article=article
-                           , couleurs=couleurs
-                           , tailles=tailles
-                           , d_taille_uniq=d_taille_uniq
-                           , d_couleur_uniq=d_couleur_uniq
-                           )
+
+    # 1. On récupère le jean (en renommant les colonnes pour ton HTML)
+    mycursor.execute("SELECT id_jean AS id_article, nom_jean, photo AS image FROM jean WHERE id_jean = %s", id_article)
+    article = mycursor.fetchone()
+
+    # 2. On récupère toutes les tailles et couleurs possibles
+    mycursor.execute("SELECT id_taille, nom_taille AS libelle FROM taille ORDER BY id_taille")
+    tailles = mycursor.fetchall()
+
+    mycursor.execute("SELECT id_couleur, nom_couleur AS libelle FROM couleur ORDER BY id_couleur")
+    couleurs = mycursor.fetchall()
+
+    return render_template('admin/article/add_declinaison_article.html',
+                           article=article,
+                           tailles=tailles,
+                           couleurs=couleurs,
+                           d_taille_uniq=0,
+                           d_couleur_uniq=0)
 
 
 @admin_declinaison_article.route('/admin/declinaison_article/add', methods=['POST'])
@@ -33,49 +39,86 @@ def valid_add_declinaison_article():
 
     id_article = request.form.get('id_article')
     stock = request.form.get('stock')
-    taille = request.form.get('taille')
-    couleur = request.form.get('couleur')
-    # attention au doublon
-    get_db().commit()
-    return redirect('/admin/article/edit?id_article=' + id_article)
+    taille_id = request.form.get('taille')
+    couleur_id = request.form.get('couleur')
+
+    # Vérification anti-doublon
+    sql_check = "SELECT * FROM declinaison WHERE jean_id = %s AND taille_id = %s AND couleur_id = %s"
+    mycursor.execute(sql_check, (id_article, taille_id, couleur_id))
+    decli_existante = mycursor.fetchone()
+
+    if decli_existante:
+        flash(u'Cette variante existe déjà ! Veuillez plutôt modifier son stock.', 'alert-warning')
+    else:
+        sql_insert = "INSERT INTO declinaison (jean_id, taille_id, couleur_id, stock) VALUES (%s, %s, %s, %s)"
+        mycursor.execute(sql_insert, (id_article, taille_id, couleur_id, stock))
+        get_db().commit()
+        flash(u'Déclinaison ajoutée avec succès !', 'alert-success')
+
+    return redirect('/admin/article/edit?id_article=' + str(id_article))
 
 
 @admin_declinaison_article.route('/admin/declinaison_article/edit', methods=['GET'])
 def edit_declinaison_article():
     id_declinaison_article = request.args.get('id_declinaison_article')
     mycursor = get_db().cursor()
-    declinaison_article=[]
-    couleurs=None
-    tailles=None
-    d_taille_uniq=None
-    d_couleur_uniq=None
-    return render_template('admin/article/edit_declinaison_article.html'
-                           , tailles=tailles
-                           , couleurs=couleurs
-                           , declinaison_article=declinaison_article
-                           , d_taille_uniq=d_taille_uniq
-                           , d_couleur_uniq=d_couleur_uniq
-                           )
+
+    # On récupère la déclinaison ET les infos de l'article pour ton HTML
+    sql_decli = '''
+        SELECT d.id_declinaison AS id_declinaison_article, 
+               d.stock, d.taille_id, d.couleur_id, d.jean_id AS article_id,
+               j.nom_jean AS nom, j.photo AS image_article
+        FROM declinaison d
+        JOIN jean j ON d.jean_id = j.id_jean
+        WHERE d.id_declinaison = %s
+    '''
+    mycursor.execute(sql_decli, id_declinaison_article)
+    declinaison_article = mycursor.fetchone()
+
+    mycursor.execute("SELECT id_taille, nom_taille AS libelle FROM taille ORDER BY id_taille")
+    tailles = mycursor.fetchall()
+
+    mycursor.execute("SELECT id_couleur, nom_couleur AS libelle FROM couleur ORDER BY id_couleur")
+    couleurs = mycursor.fetchall()
+
+    return render_template('admin/article/edit_declinaison_article.html',
+                           declinaison_article=declinaison_article,
+                           tailles=tailles,
+                           couleurs=couleurs,
+                           d_taille_uniq=0,
+                           d_couleur_uniq=0)
 
 
 @admin_declinaison_article.route('/admin/declinaison_article/edit', methods=['POST'])
 def valid_edit_declinaison_article():
-    id_declinaison_article = request.form.get('id_declinaison_article','')
-    id_article = request.form.get('id_article','')
-    stock = request.form.get('stock','')
-    taille_id = request.form.get('id_taille','')
-    couleur_id = request.form.get('id_couleur','')
     mycursor = get_db().cursor()
 
-    message = u'declinaison_article modifié , id:' + str(id_declinaison_article) + '- stock :' + str(stock) + ' - taille_id:' + str(taille_id) + ' - couleur_id:' + str(couleur_id)
-    flash(message, 'alert-success')
+    id_declinaison_article = request.form.get('id_declinaison_article')
+    id_article = request.form.get('id_article')
+    stock = request.form.get('stock')
+
+    taille_id = request.form.get('id_taille') or request.form.get('taille')
+    couleur_id = request.form.get('id_couleur') or request.form.get('couleur')
+
+    sql = "UPDATE declinaison SET taille_id = %s, couleur_id = %s, stock = %s WHERE id_declinaison = %s"
+    mycursor.execute(sql, (taille_id, couleur_id, stock, id_declinaison_article))
+    get_db().commit()
+
+    flash(u'Déclinaison modifiée avec succès !', 'alert-success')
     return redirect('/admin/article/edit?id_article=' + str(id_article))
 
 
 @admin_declinaison_article.route('/admin/declinaison_article/delete', methods=['GET'])
 def admin_delete_declinaison_article():
-    id_declinaison_article = request.args.get('id_declinaison_article','')
-    id_article = request.args.get('id_article','')
+    id_declinaison_article = request.args.get('id_declinaison_article')
+    id_article = request.args.get('id_article')
+    mycursor = get_db().cursor()
 
-    flash(u'declinaison supprimée, id_declinaison_article : ' + str(id_declinaison_article),  'alert-success')
+    try:
+        mycursor.execute("DELETE FROM declinaison WHERE id_declinaison = %s", id_declinaison_article)
+        get_db().commit()
+        flash(u'Déclinaison supprimée avec succès.', 'alert-success')
+    except:
+        flash(u'Impossible : cette déclinaison est déjà dans le panier ou la commande d\'un client.', 'alert-warning')
+
     return redirect('/admin/article/edit?id_article=' + str(id_article))

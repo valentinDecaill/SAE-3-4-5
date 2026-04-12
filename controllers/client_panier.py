@@ -13,84 +13,88 @@ client_panier = Blueprint('client_panier', __name__,
 def client_panier_add():
     mycursor = get_db().cursor()
     id_client = session['id_user']
+
     id_article = request.form.get('id_article')
     quantite = request.form.get('quantite')
-    # ---------
-    #id_declinaison_article=request.form.get('id_declinaison_article',None)
-    id_declinaison_article = 1
+    id_declinaison = request.form.get('id_declinaison_article') or request.form.get('id_declinaison')
+    id_taille_html = request.form.get('id_taille')
+    id_couleur_html = request.form.get('id_couleur')
 
-# ajout dans le panier d'une déclinaison d'un article (si 1 declinaison : immédiat sinon => vu pour faire un choix
-    #sql = '''    '''
-    # mycursor.execute(sql, (id_article))
-    # declinaisons = mycursor.fetchall()
-    # if len(declinaisons) == 1:
-    #     id_declinaison_article = declinaisons[0]['id_declinaison_article']
-    # elif len(declinaisons) == 0:
-    #     abort("pb nb de declinaison")
-    # else:
-    #     sql = '''   '''
-    #     mycursor.execute(sql, (id_article))
-    #     article = mycursor.fetchone()
-    #     return render_template('client/boutique/declinaison_article.html'
-    #                                , declinaisons=declinaisons
-    #                                , quantite=quantite
-    #                                , article=article)
+    try:
+        quantite = int(quantite)
+    except:
+        quantite = 1
 
-# ajout dans le panier d'un article
-    quantite = int(quantite) if quantite else 1
-
-    # 2. On regarde si l'article est déjà dans le panier
-    sql = "SELECT * FROM ligne_panier WHERE utilisateur_id = %s AND jean_id = %s"
-    mycursor.execute(sql, (id_client, id_article))
-    article_panier = mycursor.fetchone()
-
-    if article_panier is not None:
-        # Il y est déjà : on fait +1 (ou +quantite)
-        # (Attention : si ta colonne s'appelle quantite_panier, modifie le mot "quantite" ici !)
-        sql_update = "UPDATE ligne_panier SET quantite_panier = quantite_panier + %s WHERE utilisateur_id = %s AND jean_id = %s"
-        mycursor.execute(sql_update, (quantite, id_client, id_article))
-    else:
-        # Il n'y est pas : on le crée
-        sql_insert = "INSERT INTO ligne_panier (utilisateur_id, jean_id, quantite_panier) VALUES (%s, %s, %s)"
-        mycursor.execute(sql_insert, (id_client, id_article, quantite))
-
-    # 3. On baisse le stock de la table jean
-    sql_stock = "UPDATE jean SET stock_ = stock_ - %s WHERE id_jean = %s"
-    mycursor.execute(sql_stock, (quantite, id_article))
-
-    # On valide les changements dans la base de données
-    get_db().commit()
+    if not id_declinaison and id_taille_html and id_couleur_html:
+        sql = "SELECT id_declinaison FROM declinaison WHERE jean_id = %s AND taille_id = %s AND couleur_id = %s"
+        mycursor.execute(sql, (id_article, id_taille_html, id_couleur_html))
+        res = mycursor.fetchone()
+        if res:
+            id_declinaison = res['id_declinaison']
 
 
+    sql_declinaison = "SELECT taille_id, couleur_id, stock FROM declinaison WHERE id_declinaison = %s"
+    mycursor.execute(sql_declinaison, (id_declinaison,))
+    declinaison = mycursor.fetchone()
 
+    # Si la déclinaison existe et qu'il y a assez de stock
+    if declinaison and declinaison['stock'] >= quantite:
+        id_taille = declinaison['taille_id']
+        id_couleur = declinaison['couleur_id']
+
+        # 3. On regarde si CET article dans CETTE taille est déjà dans le panier
+        sql_verif = "SELECT * FROM ligne_panier WHERE utilisateur_id = %s AND jean_id = %s AND taille_id = %s AND couleur_id = %s"
+        mycursor.execute(sql_verif, (id_client, id_article, id_taille, id_couleur))
+        article_panier = mycursor.fetchone()
+
+        if article_panier is not None:
+            # Il y est déjà : on fait juste +1 à la quantité
+            sql_update = '''
+                UPDATE ligne_panier 
+                SET quantite_panier = quantite_panier + %s 
+                WHERE utilisateur_id = %s AND jean_id = %s AND taille_id = %s AND couleur_id=%s
+            '''
+            mycursor.execute(sql_update, (quantite, id_client, id_article, id_taille, id_couleur))
+        else:
+            # Il n'y est pas : on l'ajoute EN NOUBLIANT PAS LA TAILLE
+            sql_insert = '''
+                INSERT INTO ligne_panier (utilisateur_id, jean_id, taille_id, couleur_id, quantite_panier, date_ajout) 
+                VALUES (%s, %s, %s, %s, %s, NOW())
+            '''
+            mycursor.execute(sql_insert, (id_client, id_article, id_taille, id_couleur, quantite))
+
+        # 4. LE POINT LE PLUS IMPORTANT : On baisse le stock de la DÉCLINAISON
+        sql_stock = "UPDATE declinaison SET stock = stock - %s WHERE id_declinaison = %s"
+        mycursor.execute(sql_stock, (quantite, id_declinaison))
+
+        get_db().commit()
     return redirect('/client/article/show')
 
 @client_panier.route('/client/panier/delete', methods=['POST'])
 def client_panier_delete():
     mycursor = get_db().cursor()
     id_client = session['id_user']
-    id_article = request.form.get('id_article','')
+    id_article = request.form.get('id_article')
+    id_taille = request.form.get('id_taille')
+    id_couleur = request.form.get('id_couleur')
     quantite = 1
 
-    # ---------
-    # partie 2 : on supprime une déclinaison de l'article
-    # id_declinaison_article = request.form.get('id_declinaison_article', None)
 
-    sql = ''' SELECT * FROM ligne_panier WHERE utilisateur_id = %s AND jean_id = %s'''
-    mycursor.execute(sql, (id_client, id_article))
+    sql = ''' SELECT * FROM ligne_panier WHERE utilisateur_id = %s AND jean_id = %s AND taille_id =%s AND couleur_id = %s'''
+    mycursor.execute(sql, (id_client, id_article, id_taille, id_couleur))
     article_panier = mycursor.fetchone()
 
-    if not(article_panier is None) and article_panier['quantite_panier'] > 1:
-        sql = '''UPDATE ligne_panier SET quantite_panier = quantite_panier-%s  WHERE utilisateur_id = %s AND jean_id=%s'''
-        mycursor.execute(sql, (quantite, id_client, id_article))
+    if article_panier is not None and article_panier['quantite_panier'] > 1:
+        sql = '''UPDATE ligne_panier SET quantite_panier = quantite_panier-%s  WHERE utilisateur_id = %s AND jean_id=%s AND taille_id = %s AND couleur_id=%s'''
+        mycursor.execute(sql, (quantite, id_client, id_article, id_taille, id_couleur))
 
     else:
-        sql = '''DELETE FROM ligne_panier WHERE utilisateur_id = %s AND jean_id=%s'''
-        mycursor.execute(sql, (id_client, id_article))
+        sql = '''DELETE FROM ligne_panier WHERE utilisateur_id = %s AND jean_id=%s AND taille_id = %s AND couleur_id = %s'''
+        mycursor.execute(sql, (id_client, id_article, id_taille, id_couleur))
 
     # mise à jour du stock de l'article disponible
+    mycursor.execute("UPDATE declinaison SET stock = stock + %s WHERE jean_id=%s AND taille_id=%s AND couleur_id=%s", (quantite, id_article, id_taille, id_couleur))
     get_db().commit()
-    mycursor.execute("UPDATE jean SET stock_ = stock_ + %s WHERE id_jean=%s", (quantite, id_article))
     return redirect('/client/article/show')
 
 
@@ -100,14 +104,20 @@ def client_panier_delete():
 @client_panier.route('/client/panier/vider', methods=['POST'])
 def client_panier_vider():
     mycursor = get_db().cursor()
-    client_id = session['id_user']
-    sql = ''' sélection des lignes de panier'''
-    items_panier = []
-    for item in items_panier:
-        sql = ''' suppression de la ligne de panier de l'article pour l'utilisateur connecté'''
+    id_client = session['id_user']
 
-        sql2=''' mise à jour du stock de l'article : stock = stock + qté de la ligne pour l'article'''
-        get_db().commit()
+    sql = "SELECT jean_id, taille_id, couleur_id, quantite_panier FROM ligne_panier WHERE utilisateur_id = %s"
+    mycursor.execute(sql, (id_client,))
+    items_panier = mycursor.fetchall()
+
+    for item in items_panier:
+        sql_update = "UPDATE declinaison SET stock = stock + %s WHERE jean_id = %s AND taille_id = %s AND couleur_id=%s"
+        mycursor.execute(sql_update, (item['quantite_panier'], item['jean_id'], item['taille_id'], item['couleur_id']))
+
+    sql_delete = "DELETE FROM ligne_panier WHERE utilisateur_id = %s"
+    mycursor.execute(sql_delete, (id_client,))
+    get_db().commit()
+
     return redirect('/client/article/show')
 
 
@@ -115,14 +125,27 @@ def client_panier_vider():
 def client_panier_delete_line():
     mycursor = get_db().cursor()
     id_client = session['id_user']
-    #id_declinaison_article = request.form.get('id_declinaison_article')
+    id_article = request.form.get('id_article')
+    id_taille = request.form.get('id_taille')
+    id_couleur = request.form.get('id_couleur')
 
-    sql = ''' selection de ligne du panier '''
 
-    sql = ''' suppression de la ligne du panier '''
-    sql2=''' mise à jour du stock de l'article : stock = stock + qté de la ligne pour l'article'''
+    sql = "SELECT quantite_panier FROM ligne_panier WHERE utilisateur_id = %s AND jean_id = %s AND taille_id = %s AND couleur_id = %s"
+    mycursor.execute(sql, (id_client, id_article, id_taille, id_couleur))
+    article_panier = mycursor.fetchone()
 
-    get_db().commit()
+    if article_panier is not None:
+        quantite_a_rendre = article_panier['quantite_panier']
+
+
+        sql = "DELETE FROM ligne_panier WHERE utilisateur_id = %s AND jean_id = %s AND taille_id = %s AND couleur_id = %s"
+        mycursor.execute(sql, (id_client, id_article, id_taille, id_couleur))
+
+
+        sql_stock = "UPDATE declinaison SET stock = stock + %s WHERE jean_id = %s AND taille_id = %s AND couleur_id = %s"
+        mycursor.execute(sql_stock, (quantite_a_rendre, id_article, id_taille, id_couleur))
+        get_db().commit()
+
     return redirect('/client/article/show')
 
 
