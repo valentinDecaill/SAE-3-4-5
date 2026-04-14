@@ -14,7 +14,7 @@ def add_declinaison_article():
     id_article = request.args.get('id_article')
     mycursor = get_db().cursor()
 
-    # 1. On récupère le jean (en renommant les colonnes pour ton HTML)
+
     mycursor.execute("SELECT id_jean AS id_article, nom_jean, photo AS image FROM jean WHERE id_jean = %s", id_article)
     article = mycursor.fetchone()
 
@@ -23,17 +23,16 @@ def add_declinaison_article():
     tailles_utilisees = [row['taille_id'] for row in mycursor.fetchall()]
 
     if 1 in tailles_utilisees:
-    # S'il y a déjà une Taille Unique, on ne propose QUE Taille Unique
+
         mycursor.execute("SELECT id_taille, nom_taille AS libelle FROM taille WHERE id_taille = 1")
     elif len(tailles_utilisees) > 0:
-    # S'il y a des tailles normales, on CACHE la Taille Unique (id 1)
+
         mycursor.execute("SELECT id_taille, nom_taille AS libelle FROM taille WHERE id_taille > 1 ORDER BY id_taille")
     else:
-    # S'il n'y a aucune déclinaison, on propose tout
+
         mycursor.execute("SELECT id_taille, nom_taille AS libelle FROM taille ORDER BY id_taille")
     tailles = mycursor.fetchall()
 
-# --- LOGIQUE POINT 14 : GESTION DES COULEURS UNIQUES ---
     mycursor.execute("SELECT DISTINCT couleur_id FROM declinaison WHERE jean_id = %s", (id_article,))
     couleurs_utilisees = [row['couleur_id'] for row in mycursor.fetchall()]
 
@@ -81,7 +80,6 @@ def edit_declinaison_article():
     id_declinaison_article = request.args.get('id_declinaison_article')
     mycursor = get_db().cursor()
 
-    # On récupère la déclinaison ET les infos de l'article pour ton HTML
     sql_decli = '''
         SELECT d.id_declinaison AS id_declinaison_article, 
                d.stock, d.taille_id, d.couleur_id, d.jean_id AS article_id,

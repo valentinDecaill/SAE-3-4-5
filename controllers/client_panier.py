@@ -37,18 +37,15 @@ def client_panier_add():
     mycursor.execute(sql_declinaison, (id_declinaison,))
     declinaison = mycursor.fetchone()
 
-    # Si la déclinaison existe et qu'il y a assez de stock
     if declinaison and declinaison['stock'] >= quantite:
         id_taille = declinaison['taille_id']
         id_couleur = declinaison['couleur_id']
 
-        # 3. On regarde si CET article dans CETTE taille est déjà dans le panier
         sql_verif = "SELECT * FROM ligne_panier WHERE utilisateur_id = %s AND jean_id = %s AND taille_id = %s AND couleur_id = %s"
         mycursor.execute(sql_verif, (id_client, id_article, id_taille, id_couleur))
         article_panier = mycursor.fetchone()
 
         if article_panier is not None:
-            # Il y est déjà : on fait juste +1 à la quantité
             sql_update = '''
                 UPDATE ligne_panier 
                 SET quantite_panier = quantite_panier + %s 
@@ -56,14 +53,12 @@ def client_panier_add():
             '''
             mycursor.execute(sql_update, (quantite, id_client, id_article, id_taille, id_couleur))
         else:
-            # Il n'y est pas : on l'ajoute EN NOUBLIANT PAS LA TAILLE
             sql_insert = '''
                 INSERT INTO ligne_panier (utilisateur_id, jean_id, taille_id, couleur_id, quantite_panier, date_ajout) 
                 VALUES (%s, %s, %s, %s, %s, NOW())
             '''
             mycursor.execute(sql_insert, (id_client, id_article, id_taille, id_couleur, quantite))
 
-        # 4. LE POINT LE PLUS IMPORTANT : On baisse le stock de la DÉCLINAISON
         sql_stock = "UPDATE declinaison SET stock = stock - %s WHERE id_declinaison = %s"
         mycursor.execute(sql_stock, (quantite, id_declinaison))
 
@@ -92,7 +87,6 @@ def client_panier_delete():
         sql = '''DELETE FROM ligne_panier WHERE utilisateur_id = %s AND jean_id=%s AND taille_id = %s AND couleur_id = %s'''
         mycursor.execute(sql, (id_client, id_article, id_taille, id_couleur))
 
-    # mise à jour du stock de l'article disponible
     mycursor.execute("UPDATE declinaison SET stock = stock + %s WHERE jean_id=%s AND taille_id=%s AND couleur_id=%s", (quantite, id_article, id_taille, id_couleur))
     get_db().commit()
     return redirect('/client/article/show')
